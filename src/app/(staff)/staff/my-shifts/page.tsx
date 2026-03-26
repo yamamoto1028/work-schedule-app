@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Calendar } from 'lucide-react'
+import ShiftConfirmButton from '@/components/staff/shift-confirm-button'
 
 export default async function MyShiftsPage() {
   const supabase = await createClient()
@@ -53,9 +54,13 @@ export default async function MyShiftsPage() {
                     </div>
                   )}
                   <div className="flex-1" />
-                  <Badge variant={shift.status === 'confirmed' ? 'default' : 'secondary'} className={shift.status === 'confirmed' ? 'bg-green-100 text-green-700' : ''}>
-                    {shift.status === 'confirmed' ? '確認済' : '未確認'}
-                  </Badge>
+                  {shift.status === 'confirmed' ? (
+                    <Badge variant="outline" className="gap-1 border-emerald-300 text-emerald-700 bg-emerald-50">
+                      確認済
+                    </Badge>
+                  ) : (
+                    <ShiftConfirmButton shiftId={shift.id} />
+                  )}
                 </CardContent>
               </Card>
             )
