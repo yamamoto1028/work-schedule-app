@@ -43,6 +43,7 @@ type Props = {
   shiftTypes: ShiftType[]
   shifts: ShiftRow[]
   violations: ConstraintViolation[]
+  dissatisfactionScores?: Map<string, number>
   onShiftChange: (userId: string, date: string, shiftTypeId: string | null) => Promise<void>
   onShiftMove: (fromUserId: string, fromDate: string, toUserId: string, toDate: string) => Promise<void>
 }
@@ -81,7 +82,7 @@ function DroppableCell({
 }
 
 export default function ShiftCalendarGrid({
-  year, month, staff, shiftTypes, shifts, violations, onShiftChange, onShiftMove,
+  year, month, staff, shiftTypes, shifts, violations, dissatisfactionScores, onShiftChange, onShiftMove,
 }: Props) {
   const [pendingCell, setPendingCell] = useState<string | null>(null)
   const [activeData, setActiveData] = useState<{ shiftTypeId: string } | null>(null)
@@ -180,18 +181,28 @@ export default function ShiftCalendarGrid({
           <tbody>
             {staff.map((member, rowIdx) => (
               <tr key={member.id} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                <td className="sticky left-0 z-10 border-b border-r border-gray-200 px-3 py-1 min-w-[160px] bg-inherit">
-                  <div className="flex items-center gap-2">
+                <td className="sticky left-0 z-10 border-b border-r border-gray-200 px-2 py-1 min-w-[160px] bg-inherit">
+                  <div className="flex items-center gap-1.5">
+                    {(() => {
+                      const score = dissatisfactionScores?.get(member.id)
+                      if (score === undefined) return null
+                      const color = score >= 70 ? 'bg-red-100 text-red-700' : score <= 30 ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'
+                      return (
+                        <span className={`text-[10px] font-bold px-1 py-0.5 rounded shrink-0 ${color}`} title="不満スコア">
+                          {score}
+                        </span>
+                      )
+                    })()}
                     {member.staff_profiles?.responsible_roles && (
                       <span
-                        className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                        className="inline-block w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: member.staff_profiles.responsible_roles.color }}
                       />
                     )}
-                    <span className="font-medium text-gray-800 truncate max-w-[120px]">{member.display_name}</span>
+                    <span className="font-medium text-gray-800 truncate max-w-[100px]">{member.display_name}</span>
                   </div>
                   {member.staff_profiles?.position && (
-                    <div className="text-[10px] text-gray-400 pl-4">{member.staff_profiles.position}</div>
+                    <div className="text-[10px] text-gray-400 pl-1">{member.staff_profiles.position}</div>
                   )}
                 </td>
 

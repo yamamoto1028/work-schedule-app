@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { checkConstraints, ShiftEntry, ConstraintViolation } from '@/lib/constraints/checker'
 import ShiftCalendarGrid from './shift-calendar-grid'
+import YomogiPanel from '@/components/yomogi/yomogi-panel'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
+import type { GeneratedShift, DissatisfactionScore } from '@/lib/ai/yomogi'
 
 type StaffMember = {
   id: string
@@ -62,6 +64,7 @@ export default function ShiftCalendarPage({
   const [constraints, setConstraints] = useState<{ constraint_key: string; is_enabled: boolean; value: Record<string, number> }[]>([])
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
+  const [dissatisfactionScores, setDissatisfactionScores] = useState<Map<string, number>>(new Map())
   const supabase = createClient()
 
   const fetchShifts = useCallback(async () => {
@@ -207,9 +210,47 @@ export default function ShiftCalendarPage({
     setPublishing(false)
   }
 
+  const handleApplyAIShifts = async (generatedShifts: GeneratedShift[]) => {
+    for (const gs of generatedShifts) {
+      const existing = shifts.find(s => s.user_id === gs.user_id && s.date === gs.date)
+      if (existing) {
+        const { data } = await supabase
+          .from('shifts')
+          .update({ shift_type_id: gs.shift_type_id })
+          .eq('id', existing.id)
+          .select('id, user_id, shift_type_id, date, status')
+          .single()
+        if (data) setShifts(prev => prev.map(s => s.id === data.id ? data : s))
+      } else {
+        const { data } = await supabase
+          .from('shifts')
+          .insert({ facility_id: facilityId, user_id: gs.user_id, shift_type_id: gs.shift_type_id, date: gs.date, status: 'draft' })
+          .select('id, user_id, shift_type_id, date, status')
+          .single()
+        if (data) setShifts(prev => [...prev, data])
+      }
+    }
+  }
+
   const errorCount = violations.filter(v => v.severity === 'error').length
   const warningCount = violations.filter(v => v.severity === 'warning').length
   const hasDraft = shifts.some(s => s.status === 'draft')
+
+  const aiStaff = staff.map(s => ({
+    id: s.id,
+    display_name: s.display_name,
+    can_night_shift: s.staff_profiles?.can_night_shift ?? false,
+    staff_grade: s.staff_profiles?.staff_grade ?? 'full' as const,
+    position: s.staff_profiles?.position ?? null,
+    responsible_role: s.staff_profiles?.responsible_roles?.name ?? null,
+  }))
+
+  const aiShiftTypes = shiftTypes.map(t => ({
+    id: t.id,
+    name: t.name,
+    short_name: t.short_name,
+    time_zone: t.time_zone,
+  }))
 
   return (
     <div className="flex flex-col gap-4">
@@ -265,6 +306,23 @@ export default function ShiftCalendarPage({
         </div>
       </div>
 
+      {/* ヨモギ主任パネル */}
+      <YomogiPanel
+        facilityId={facilityId}
+        facilityType={facilityType}
+        year={year}
+        month={month}
+        staff={aiStaff}
+        shiftTypes={aiShiftTypes}
+        constraints={constraints}
+        onApplyShifts={handleApplyAIShifts}
+        onScoresUpdate={(scores: DissatisfactionScore[]) => {
+          const map = new Map<string, number>()
+          scores.forEach(s => map.set(s.user_id, s.score))
+          setDissatisfactionScores(map)
+        }}
+      />
+
       {/* カレンダーグリッド */}
       {loading ? (
         <div className="flex items-center justify-center h-64 text-gray-400">
@@ -278,6 +336,7 @@ export default function ShiftCalendarPage({
           shiftTypes={shiftTypes}
           shifts={shifts}
           violations={violations}
+          dissatisfactionScores={dissatisfactionScores}
           onShiftChange={handleShiftChange}
           onShiftMove={handleShiftMove}
         />
