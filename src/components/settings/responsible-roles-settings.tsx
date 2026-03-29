@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { Plus, Trash2, Sun, Moon } from 'lucide-react'
+import { Plus, Trash2, Sun, Moon, ShieldCheck } from 'lucide-react'
 
 type ResponsibleRole = {
   id: string
@@ -19,6 +19,7 @@ type ResponsibleRole = {
   require_day_zone_count: number
   require_night_zone: boolean
   require_night_zone_count: number
+  can_create_shifts?: boolean
   is_active: boolean
 }
 
@@ -37,6 +38,7 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
     require_day_zone_count: 1,
     require_night_zone: false,
     require_night_zone_count: 1,
+    can_create_shifts: false,
   })
 
   const handleAdd = async () => {
@@ -55,8 +57,8 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
       toast.error('追加に失敗しました')
       return
     }
-    setRoles([...roles, data])
-    setNewForm({ name: '', color: '#E25822', require_day_zone: true, require_day_zone_count: 1, require_night_zone: false, require_night_zone_count: 1 })
+    setRoles([...roles, { can_create_shifts: false, ...data } as ResponsibleRole])
+    setNewForm({ name: '', color: '#E25822', require_day_zone: true, require_day_zone_count: 1, require_night_zone: false, require_night_zone_count: 1, can_create_shifts: false })
     toast.success('責任者区分を追加しました')
     router.refresh()
   }
@@ -74,9 +76,43 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
   }
 
   const handleUpdate = async (role: ResponsibleRole, field: keyof ResponsibleRole, value: unknown) => {
+    if (field === 'can_create_shifts') {
+      const msg = value
+        ? `「${role.name}」の区分に属するスタッフ全員に管理者権限を付与します。よろしいですか？`
+        : `「${role.name}」の区分に属するスタッフ全員の管理者権限をスタッフ権限に戻します。\n自身がこの区分に属している場合、管理者画面にアクセスできなくなります。よろしいですか？`
+      if (!window.confirm(msg)) return
+    }
+
     const supabase = createClient()
-    await supabase.from('responsible_roles').update({ [field]: value }).eq('id', role.id)
+    const { error: updateError } = await supabase
+      .from('responsible_roles')
+      .update({ [field]: value })
+      .eq('id', role.id)
+
+    if (updateError) {
+      console.error('[handleUpdate] responsible_roles update error:', updateError)
+      toast.error(`更新に失敗しました: ${updateError.message}`)
+      return
+    }
+
     setRoles(roles.map((r) => r.id === role.id ? { ...r, [field]: value } : r))
+
+    // can_create_shifts が変更されたときは該当スタッフの role を一括更新
+    if (field === 'can_create_shifts') {
+      const res = await fetch('/api/responsible-roles/sync-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responsibleRoleId: role.id, canCreateShifts: value }),
+      })
+      const json = await res.json()
+      console.log('[sync-admin] response:', res.status, json)
+      if (!res.ok) {
+        toast.error(`スタッフ権限の同期に失敗しました: ${json.error ?? res.status}`)
+      } else {
+        toast.success(`${json.updated}名のスタッフ権限を${value ? '管理者' : 'スタッフ'}に更新しました`)
+      }
+    }
+
     router.refresh()
   }
 
@@ -161,6 +197,17 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
                     </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-3 pl-6">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-0.5">シフト作成権限（admin権限）</div>
+                    <div className="text-xs text-gray-500">この区分のスタッフにシフト作成・編集権限を付与する</div>
+                  </div>
+                  <Switch
+                    checked={role.can_create_shifts ?? false}
+                    onCheckedChange={(v) => handleUpdate(role, 'can_create_shifts', v)}
+                  />
+                </div>
               </div>
             ))
           )}
@@ -181,7 +228,7 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
               <Input
                 value={newForm.name}
                 onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
-                placeholder="例：ユニットリーダー"
+                placeholder="例：主任、副主任、夜勤責任者"
               />
             </div>
             <div className="space-y-2">
@@ -241,6 +288,17 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
                 </div>
               )}
             </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              <Label>シフト作成権限（admin権限）</Label>
+              <Switch
+                checked={newForm.can_create_shifts}
+                onCheckedChange={(v) => setNewForm({ ...newForm, can_create_shifts: v })}
+              />
+            </div>
+            <p className="text-xs text-gray-500 pl-7">この区分のスタッフにシフト作成・編集権限を付与する</p>
           </div>
           <Button onClick={handleAdd} className="bg-emerald-600 hover:bg-emerald-700">
             <Plus className="h-4 w-4 mr-2" />

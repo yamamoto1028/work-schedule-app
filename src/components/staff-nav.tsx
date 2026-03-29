@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Calendar, ClipboardList, LogOut, Building2 } from 'lucide-react'
+import { Calendar, ClipboardList, LogOut, Building2, ArrowLeftRight } from 'lucide-react'
 
 const navItems = [
   { href: '/staff/my-shifts', label: '自分のシフト', icon: Calendar },
@@ -23,9 +23,10 @@ type StaffNavProps = {
     name: string
     type: string
   } | null
+  isAdmin?: boolean
 }
 
-export default function StaffNav({ user, facility }: StaffNavProps) {
+export default function StaffNav({ user, facility, isAdmin = false }: StaffNavProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -80,6 +81,19 @@ export default function StaffNav({ user, facility }: StaffNavProps) {
           )
         })}
       </nav>
+
+      {/* 管理者は管理画面へのリンクを表示 */}
+      {isAdmin && (
+        <div className="px-4 py-2 border-t border-gray-700">
+          <Link
+            href="/admin/dashboard"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+          >
+            <ArrowLeftRight className="h-4 w-4 shrink-0" />
+            管理者画面へ
+          </Link>
+        </div>
+      )}
 
       <div className="p-4 border-t border-gray-700">
         <div className="flex items-center gap-3 mb-3">

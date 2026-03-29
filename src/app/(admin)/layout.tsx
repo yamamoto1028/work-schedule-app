@@ -18,10 +18,7 @@ export default async function AdminLayout({
     .eq('id', user.id)
     .single()
 
-  if (!userData) {
-    // DBレコード未登録（初回セットアップ未完了）→ ログインページでエラー表示
-    redirect('/login?error=setup_required')
-  }
+  if (!userData) redirect('/login?error=setup_required')
   if (userData.role !== 'admin') redirect('/staff/my-shifts')
 
   return (

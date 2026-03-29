@@ -19,11 +19,12 @@ export default async function StaffLayout({
     .single()
 
   if (!userData) redirect('/login?error=setup_required')
-  if (userData.role !== 'staff') redirect('/admin/dashboard')
+  // admin も自分のシフト確認・休暇申請のためにスタッフ画面にアクセス可能
+  if (userData.role !== 'staff' && userData.role !== 'admin') redirect('/login')
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <StaffNav user={userData} facility={userData.facilities} />
+      <StaffNav user={userData} facility={userData.facilities} isAdmin={userData.role === 'admin'} />
       <main className="ml-56 p-8">
         {children}
       </main>

@@ -72,6 +72,8 @@ export default async function SettingsPage() {
           <ConstraintSettings
             facilityId={facilityId}
             constraints={constraintResult.data ?? []}
+            responsibleRoles={responsibleRolesResult.data ?? []}
+            shiftTypes={shiftTypesResult.data ?? []}
           />
         </TabsContent>
       </Tabs>

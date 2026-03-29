@@ -18,6 +18,7 @@ import {
   AILeaveInput,
   AIConstraintInput,
   AIResponsibleRoleInput,
+  AIFixedShiftInput,
   GeneratedShift,
   DissatisfactionScore,
   YomogiResult,
@@ -34,6 +35,7 @@ type Props = {
   staff: AIStaffInput[];
   shiftTypes: AIShiftTypeInput[];
   constraints: AIConstraintInput[];
+  fixedShifts?: AIFixedShiftInput[];
   onApplyShifts: (shifts: GeneratedShift[]) => Promise<void>;
   onScoresUpdate?: (scores: DissatisfactionScore[]) => void;
 };
@@ -62,6 +64,7 @@ export default function YomogiPanel({
   staff,
   shiftTypes,
   constraints,
+  fixedShifts = [],
   onApplyShifts,
   onScoresUpdate,
 }: Props) {
@@ -70,6 +73,7 @@ export default function YomogiPanel({
   const [commentary, setCommentary] = useState("");
   const [result, setResult] = useState<YomogiResult | null>(null);
   const [applying, setApplying] = useState(false);
+  const [missingNightDates, setMissingNightDates] = useState<string[]>([]);
   const commentaryRef = useRef<HTMLDivElement>(null);
   const fullTextRef = useRef("");
 
@@ -83,6 +87,7 @@ export default function YomogiPanel({
     setStatus("generating");
     setCommentary("");
     setResult(null);
+    setMissingNightDates([]);
     fullTextRef.current = "";
 
     const targetMonth = `${year}-${String(month).padStart(2, "0")}`;
@@ -113,6 +118,7 @@ export default function YomogiPanel({
       responsibleRoles: [] as AIResponsibleRoleInput[],
       approvedLeaves,
       holidays,
+      fixedShifts,
     };
 
     try {
@@ -169,6 +175,22 @@ export default function YomogiPanel({
 
       const parsed = extractShiftsJson(fullTextRef.current);
       if (parsed && parsed.shifts.length > 0) {
+        // 夜間帯シフトが欠けている日を検出
+        const nightShiftTypeIds = new Set(
+          shiftTypes.filter((t) => t.time_zone === "night").map((t) => t.id)
+        );
+        const lastDay = new Date(year, month, 0).getDate();
+        const allDates = Array.from({ length: lastDay }, (_, i) =>
+          `${year}-${String(month).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`
+        );
+        const datesWithNight = new Set(
+          parsed.shifts
+            .filter((s) => nightShiftTypeIds.has(s.shift_type_id))
+            .map((s) => s.date)
+        );
+        const missing = allDates.filter((d) => !datesWithNight.has(d));
+        setMissingNightDates(missing);
+
         setResult(parsed);
         setStatus("done");
         onScoresUpdate?.(parsed.dissatisfaction_scores);
@@ -300,6 +322,24 @@ export default function YomogiPanel({
                   </p>
                 )}
               </div>
+
+              {/* 夜勤未配置日の警告 */}
+              {missingNightDates.length > 0 && (
+                <div className="bg-red-50 rounded-lg border border-red-200 p-3">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                    <span className="text-xs font-semibold text-red-700">
+                      夜勤未配置の日があります（{missingNightDates.length}日）
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-red-600">
+                    {missingNightDates.map((d) => d.slice(8)).join("日・")}日
+                  </p>
+                  <p className="text-[11px] text-red-500 mt-1">
+                    再生成するか、カレンダーで手動修正してください。
+                  </p>
+                </div>
+              )}
 
               {/* スタッフ別不満スコア */}
               {result.dissatisfaction_scores.length > 0 && (

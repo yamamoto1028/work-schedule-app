@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { UserPlus, Loader2 } from 'lucide-react'
 
@@ -30,12 +31,19 @@ type ResponsibleRole = {
   color: string
 }
 
+type ShiftType = {
+  id: string
+  name: string
+  short_name: string
+}
+
 type Props = {
   facilityId: string
   responsibleRoles: ResponsibleRole[]
+  shiftTypes: ShiftType[]
 }
 
-export default function StaffCreateDialog({ facilityId, responsibleRoles }: Props) {
+export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftTypes }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -49,7 +57,17 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles }: Prop
     staff_grade: 'full' as 'full' | 'half' | 'new',
     can_night_shift: true,
     phone: '',
+    allowed_shift_type_ids: [] as string[],
   })
+
+  const toggleShiftType = (id: string) => {
+    setForm(prev => ({
+      ...prev,
+      allowed_shift_type_ids: prev.allowed_shift_type_ids.includes(id)
+        ? prev.allowed_shift_type_ids.filter(i => i !== id)
+        : [...prev.allowed_shift_type_ids, id],
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,6 +104,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles }: Prop
       staff_grade: form.staff_grade,
       can_night_shift: form.can_night_shift,
       phone: form.phone || null,
+      allowed_shift_type_ids: form.allowed_shift_type_ids,
     })
 
     if (profileError) {
@@ -106,6 +125,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles }: Prop
       staff_grade: 'full',
       can_night_shift: true,
       phone: '',
+      allowed_shift_type_ids: [],
     })
     router.refresh()
     setLoading(false)
@@ -227,6 +247,29 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles }: Prop
             />
             <Label htmlFor="can-night">夜勤可能</Label>
           </div>
+
+          {shiftTypes.length > 0 && (
+            <div className="space-y-2">
+              <Label>入れるシフト制限（チェックなし = 全シフト可）</Label>
+              <div className="flex flex-wrap gap-3 p-3 border rounded-lg bg-gray-50">
+                {shiftTypes.map((st) => (
+                  <div key={st.id} className="flex items-center gap-1.5">
+                    <Checkbox
+                      id={`create-st-${st.id}`}
+                      checked={form.allowed_shift_type_ids.includes(st.id)}
+                      onCheckedChange={() => toggleShiftType(st.id)}
+                    />
+                    <Label htmlFor={`create-st-${st.id}`} className="text-sm font-normal cursor-pointer">
+                      {st.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {form.allowed_shift_type_ids.length > 0 && (
+                <p className="text-xs text-amber-600">選択したシフトのみ割り当て可能になります</p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>

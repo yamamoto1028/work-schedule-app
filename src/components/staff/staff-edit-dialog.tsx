@@ -20,10 +20,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
 type ResponsibleRole = { id: string; name: string; color: string }
+
+type ShiftType = { id: string; name: string; short_name: string }
 
 type StaffProfile = {
   id: string
@@ -35,6 +38,7 @@ type StaffProfile = {
   phone: string | null
   staff_grade: 'full' | 'half' | 'new'
   fixed_night_count: number | null
+  allowed_shift_type_ids: string[]
   skills: string[]
   responsible_roles: { name: string; color: string } | null
 }
@@ -51,11 +55,12 @@ type Props = {
   staff: StaffUser
   facilityId: string
   responsibleRoles: ResponsibleRole[]
+  shiftTypes: ShiftType[]
   open: boolean
   onClose: () => void
 }
 
-export default function StaffEditDialog({ staff, facilityId, responsibleRoles, open, onClose }: Props) {
+export default function StaffEditDialog({ staff, facilityId, responsibleRoles, shiftTypes, open, onClose }: Props) {
   const router = useRouter()
   const profile = staff.staff_profiles
   const [loading, setLoading] = useState(false)
@@ -68,7 +73,17 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, o
     can_night_shift: profile?.can_night_shift ?? true,
     max_monthly_shifts: profile?.max_monthly_shifts?.toString() ?? '',
     phone: profile?.phone ?? '',
+    allowed_shift_type_ids: profile?.allowed_shift_type_ids ?? [],
   })
+
+  const toggleShiftType = (id: string) => {
+    setForm(prev => ({
+      ...prev,
+      allowed_shift_type_ids: prev.allowed_shift_type_ids.includes(id)
+        ? prev.allowed_shift_type_ids.filter(i => i !== id)
+        : [...prev.allowed_shift_type_ids, id],
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -94,6 +109,7 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, o
       can_night_shift: form.can_night_shift,
       max_monthly_shifts: form.max_monthly_shifts ? parseInt(form.max_monthly_shifts) : null,
       phone: form.phone || null,
+      allowed_shift_type_ids: form.allowed_shift_type_ids,
     }
 
     if (profile) {
@@ -211,6 +227,29 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, o
             />
             <Label htmlFor="can-night-edit">夜勤可能</Label>
           </div>
+
+          {shiftTypes.length > 0 && (
+            <div className="space-y-2">
+              <Label>入れるシフト制限（チェックなし = 全シフト可）</Label>
+              <div className="flex flex-wrap gap-3 p-3 border rounded-lg bg-gray-50">
+                {shiftTypes.map((st) => (
+                  <div key={st.id} className="flex items-center gap-1.5">
+                    <Checkbox
+                      id={`edit-st-${st.id}`}
+                      checked={form.allowed_shift_type_ids.includes(st.id)}
+                      onCheckedChange={() => toggleShiftType(st.id)}
+                    />
+                    <Label htmlFor={`edit-st-${st.id}`} className="text-sm font-normal cursor-pointer">
+                      {st.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {form.allowed_shift_type_ids.length > 0 && (
+                <p className="text-xs text-amber-600">選択したシフトのみ割り当て可能になります</p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>

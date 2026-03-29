@@ -1,6 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import StaffTable from '@/components/staff/staff-table'
 import StaffCreateDialog from '@/components/staff/staff-create-dialog'
@@ -18,7 +16,7 @@ export default async function StaffPage() {
 
   const facilityId = userData?.facility_id!
 
-  const [staffResult, responsibleRolesResult] = await Promise.all([
+  const [staffResult, responsibleRolesResult, shiftTypesResult] = await Promise.all([
     supabase
       .from('users')
       .select(`
@@ -29,13 +27,18 @@ export default async function StaffPage() {
         )
       `)
       .eq('facility_id', facilityId)
-      .eq('role', 'staff')
       .order('created_at', { ascending: true }),
     supabase
       .from('responsible_roles')
       .select('*')
       .eq('facility_id', facilityId)
+      .eq('is_active', true),
+    supabase
+      .from('shift_types')
+      .select('id, name, short_name')
+      .eq('facility_id', facilityId)
       .eq('is_active', true)
+      .order('sort_order'),
   ])
 
   return (
@@ -50,6 +53,7 @@ export default async function StaffPage() {
         <StaffCreateDialog
           facilityId={facilityId}
           responsibleRoles={responsibleRolesResult.data ?? []}
+          shiftTypes={shiftTypesResult.data ?? []}
         />
       </div>
 
@@ -59,6 +63,7 @@ export default async function StaffPage() {
             staff={staffResult.data ?? []}
             facilityId={facilityId}
             responsibleRoles={responsibleRolesResult.data ?? []}
+            shiftTypes={shiftTypesResult.data ?? []}
           />
         </CardContent>
       </Card>

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -11,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { MoreHorizontal, Pencil, Trash2, Moon, Sun } from 'lucide-react'
+import { MoreHorizontal, Pencil, Moon, Sun } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +28,12 @@ type ResponsibleRole = {
   color: string
 }
 
+type ShiftType = {
+  id: string
+  name: string
+  short_name: string
+}
+
 type StaffProfile = {
   id: string
   employment_type: string | null
@@ -39,6 +44,7 @@ type StaffProfile = {
   phone: string | null
   staff_grade: 'full' | 'half' | 'new'
   fixed_night_count: number | null
+  allowed_shift_type_ids: string[]
   skills: string[]
   responsible_roles: { name: string; color: string } | null
 }
@@ -55,6 +61,7 @@ type StaffUser = {
 type Props = {
   staff: StaffUser[]
   facilityId: string
+  shiftTypes: ShiftType[]
   responsibleRoles: ResponsibleRole[]
 }
 
@@ -70,7 +77,7 @@ const gradeVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'o
   new: 'outline',
 }
 
-export default function StaffTable({ staff: initialStaff, facilityId, responsibleRoles }: Props) {
+export default function StaffTable({ staff: initialStaff, facilityId, responsibleRoles, shiftTypes }: Props) {
   const router = useRouter()
   const [editTarget, setEditTarget] = useState<StaffUser | null>(null)
 
@@ -191,6 +198,7 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
           staff={editTarget}
           facilityId={facilityId}
           responsibleRoles={responsibleRoles}
+          shiftTypes={shiftTypes}
           open={!!editTarget}
           onClose={() => setEditTarget(null)}
         />

@@ -8,6 +8,7 @@ export type AIStaffInput = {
   position: string | null
   max_monthly_shifts?: number | null
   responsible_role?: string | null
+  allowed_shift_type_ids: string[] // 空 = 制限なし
 }
 
 export type AIShiftTypeInput = {
@@ -23,10 +24,18 @@ export type AILeaveInput = {
   leave_type_name: string
 }
 
+export type AIFixedShiftInput = {
+  user_id: string
+  display_name: string
+  date: string
+  shift_name: string
+  time_zone: 'day' | 'night'
+}
+
 export type AIConstraintInput = {
   constraint_key: string
   is_enabled: boolean
-  value: Record<string, number>
+  value: Record<string, unknown>
 }
 
 export type AIResponsibleRoleInput = {
@@ -44,6 +53,7 @@ export type AIShiftInput = {
   shiftTypes: AIShiftTypeInput[]
   responsibleRoles: AIResponsibleRoleInput[]
   holidays: string[]
+  fixedShifts?: AIFixedShiftInput[]
 }
 
 export type GeneratedShift = {
@@ -79,13 +89,17 @@ export function buildSystemPrompt(facilityType: 'hospital' | 'care_facility'): s
 - その直後にJSONを出力して終わる
 
 【シフトルール（内部処理のみ、出力しない）】
-- 夜勤明け翌日は必ず休み
+- ★最重要★ 固定済みシフト（【固定済みシフト】セクションに記載）は絶対に変更しない。出力JSONに含めなくてよい（すでにDB登録済み）
+- ★最重要★ 固定済みシフトを考慮した上で、空きスロットのみを埋めること
+- ★最重要★ 月の全日程（1日〜末日）に必ず夜間帯(time_zone=night)スタッフを1名以上配置する。1日でも夜勤空白があれば生成失敗
+- 夜勤明け翌日は必ず休み（rest dayとしてエントリ不要）
 - 夜間帯翌日に日中帯不可
 - 連続勤務は制約値を守る
 - 月最大勤務数を守る
-- 承認済み休暇日は休み固定
+- 承認済み休暇日は休み固定（エントリ不要）
 - 夜勤不可スタッフに夜間帯シフト不可
 - half/new staff_gradeを同一シフトに複数配置しない
+- 夜勤可スタッフで月間夜勤回数を均等配分する
 
 【出力フォーマット（厳守）】
 安芸弁ぼやき（100文字以内）
@@ -98,13 +112,18 @@ export function buildUserMessage(input: AIShiftInput): string {
   const [year, month] = input.targetMonth.split('-').map(Number)
   const lastDay = new Date(year, month, 0).getDate()
 
-  const staffList = input.staff.map(s =>
-    `- ${s.display_name}（${s.position ?? '一般'}、夜勤${s.can_night_shift ? '可' : '不可'}、` +
-    `スタッフ区分: ${s.staff_grade === 'full' ? 'フル' : s.staff_grade === 'half' ? '半人前' : '新人'}` +
-    `${s.max_monthly_shifts ? `、月最大${s.max_monthly_shifts}日` : ''}` +
-    `${s.responsible_role ? `、責任者: ${s.responsible_role}` : ''}` +
-    `、ID: ${s.id}）`
-  ).join('\n')
+  const shiftTypeIdToName = new Map(input.shiftTypes.map(t => [t.id, t.name]))
+  const staffList = input.staff.map(s => {
+    const allowedNames = s.allowed_shift_type_ids.length > 0
+      ? s.allowed_shift_type_ids.map(id => shiftTypeIdToName.get(id) ?? id).join('・')
+      : null
+    return `- ${s.display_name}（${s.position ?? '一般'}、夜勤${s.can_night_shift ? '可' : '不可'}、` +
+      `スタッフ区分: ${s.staff_grade === 'full' ? 'フル' : s.staff_grade === 'half' ? '半人前' : '新人'}` +
+      `${s.max_monthly_shifts ? `、月最大${s.max_monthly_shifts}日` : ''}` +
+      `${s.responsible_role ? `、責任者: ${s.responsible_role}` : ''}` +
+      `${allowedNames ? `、★入れるシフト限定: ${allowedNames}のみ` : ''}` +
+      `、ID: ${s.id}）`
+  }).join('\n')
 
   const shiftTypeList = input.shiftTypes.map(t =>
     `- ${t.name}（略称: ${t.short_name}、${t.time_zone === 'day' ? '日中帯' : '夜間帯'}、ID: ${t.id}）`
@@ -140,7 +159,12 @@ ${holidayList}
 【有効な制約】
 ${enabledConstraints || '（なし）'}
 
-上記の条件でシフトを生成してください。まず状況のぼやきコメントを安芸弁で述べてから、勤務するシフトのみJSONで出力してください（休日はエントリ不要）。`
+【固定済みシフト（変更不可・出力不要）】
+${input.fixedShifts && input.fixedShifts.length > 0
+  ? input.fixedShifts.map(f => `- ${f.date}: ${f.display_name}（${f.shift_name}、${f.time_zone === 'day' ? '日中帯' : '夜間帯'}）`).join('\n')
+  : '（なし）'}
+
+上記の条件でシフトを生成してください。固定済みシフトを除いた空きスロットのみ埋めてください。まず状況のぼやきコメントを安芸弁で述べてから、勤務するシフトのみJSONで出力してください（休日・固定済みシフトはエントリ不要）。`
 }
 
 export function extractShiftsJson(text: string): YomogiResult | null {

@@ -88,6 +88,7 @@ export type Database = {
           phone: string | null
           staff_grade: 'full' | 'half' | 'new'
           fixed_night_count: number | null
+          allowed_shift_type_ids: string[]
           updated_at: string
         }
         Insert: {
@@ -103,6 +104,7 @@ export type Database = {
           phone?: string | null
           staff_grade?: 'full' | 'half' | 'new'
           fixed_night_count?: number | null
+          allowed_shift_type_ids?: string[]
           updated_at?: string
         }
         Update: {
@@ -118,6 +120,7 @@ export type Database = {
           phone?: string | null
           staff_grade?: 'full' | 'half' | 'new'
           fixed_night_count?: number | null
+          allowed_shift_type_ids?: string[]
           updated_at?: string
         }
         Relationships: [

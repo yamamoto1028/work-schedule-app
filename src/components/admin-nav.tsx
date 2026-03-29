@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import NotificationBell from "@/components/notification-bell";
 import {
   LayoutDashboard,
   Calendar,
@@ -13,17 +14,21 @@ import {
   Settings,
   LogOut,
   Building2,
+  ClipboardList,
+  ArrowLeftRight,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/admin/shifts", label: "シフト管理", icon: Calendar },
   { href: "/admin/staff", label: "スタッフ管理", icon: Users },
+  { href: "/admin/leaves", label: "休暇申請", icon: ClipboardList },
   { href: "/admin/settings", label: "施設設定", icon: Settings },
 ];
 
 type AdminNavProps = {
   user: {
+    id: string;
     display_name: string;
     email: string;
     avatar_url: string | null;
@@ -97,6 +102,23 @@ export default function AdminNav({ user, facility }: AdminNavProps) {
           );
         })}
       </nav>
+
+      {/* 通知ベル */}
+      <div className="px-4 py-2 border-t border-gray-700 flex items-center justify-between">
+        <span className="text-xs text-gray-500">通知</span>
+        <NotificationBell userId={user.id} />
+      </div>
+
+      {/* 全管理者向けスタッフ画面リンク（自分のシフト・休暇申請） */}
+      <div className="px-4 py-2 border-t border-gray-700">
+        <Link
+          href="/staff/my-shifts"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+        >
+          <ArrowLeftRight className="h-4 w-4 shrink-0" />
+          スタッフ画面へ
+        </Link>
+      </div>
 
       {/* ユーザー情報 */}
       <div className="p-4 border-t border-gray-700">

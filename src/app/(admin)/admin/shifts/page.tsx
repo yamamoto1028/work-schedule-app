@@ -25,7 +25,7 @@ export default async function ShiftsPage() {
       .select(`
         id, display_name,
         staff_profiles(
-          employment_type, position, can_night_shift, staff_grade,
+          employment_type, position, can_night_shift, staff_grade, allowed_shift_type_ids,
           responsible_roles(name, color)
         )
       `)
