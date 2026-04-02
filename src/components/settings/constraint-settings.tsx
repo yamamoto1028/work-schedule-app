@@ -69,18 +69,13 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
 
   useEffect(() => {
     const supabase = createClient()
-    supabase
-      .from('responsible_roles')
-      .select('id, name')
-      .eq('facility_id', facilityId)
-      .then(({ data }) => { if (data) setResponsibleRoles(data) })
-    supabase
-      .from('shift_types')
-      .select('id, name, short_name')
-      .eq('facility_id', facilityId)
-      .eq('is_active', true)
-      .order('sort_order')
-      .then(({ data }) => { if (data) setShiftTypes(data) })
+    Promise.all([
+      supabase.from('responsible_roles').select('id, name').eq('facility_id', facilityId),
+      supabase.from('shift_types').select('id, name, short_name').eq('facility_id', facilityId).eq('is_active', true).order('sort_order'),
+    ]).then(([{ data: roles }, { data: types }]) => {
+      if (roles) setResponsibleRoles(roles)
+      if (types) setShiftTypes(types)
+    })
   }, [facilityId])
 
   const getConstraint = (key: string) => constraints.find((c) => c.constraint_key === key)
@@ -94,14 +89,14 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
         .from('constraint_settings')
         .update({ is_enabled: !current })
         .eq('id', existing.id)
-      setConstraints(constraints.map((c) => c.constraint_key === key ? { ...c, is_enabled: !current } : c))
+      setConstraints(prev => prev.map((c) => c.constraint_key === key ? { ...c, is_enabled: !current } : c))
     } else {
       const { data } = await supabase
         .from('constraint_settings')
         .insert({ facility_id: facilityId, constraint_key: key, is_enabled: true, value: {} })
         .select()
         .single()
-      if (data) setConstraints([...constraints, data])
+      if (data) setConstraints(prev => [...prev, data])
     }
     router.refresh()
   }
@@ -113,14 +108,14 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
 
     if (existing) {
       await supabase.from('constraint_settings').update({ value: newValue as Json }).eq('id', existing.id)
-      setConstraints(constraints.map((c) => c.constraint_key === key ? { ...c, value: newValue as Json } : c))
+      setConstraints(prev => prev.map((c) => c.constraint_key === key ? { ...c, value: newValue as Json } : c))
     } else {
       const { data } = await supabase
         .from('constraint_settings')
         .insert({ facility_id: facilityId, constraint_key: key, is_enabled: true, value: newValue as Json })
         .select()
         .single()
-      if (data) setConstraints([...constraints, data as ConstraintSetting])
+      if (data) setConstraints(prev => [...prev, data as ConstraintSetting])
     }
   }
 
@@ -131,14 +126,14 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
 
     if (existing) {
       await supabase.from('constraint_settings').update({ value: newValue as Json }).eq('id', existing.id)
-      setConstraints(constraints.map((c) => c.constraint_key === key ? { ...c, value: newValue as Json } : c))
+      setConstraints(prev => prev.map((c) => c.constraint_key === key ? { ...c, value: newValue as Json } : c))
     } else {
       const { data } = await supabase
         .from('constraint_settings')
         .insert({ facility_id: facilityId, constraint_key: key, is_enabled: true, value: newValue as Json })
         .select()
         .single()
-      if (data) setConstraints([...constraints, data as ConstraintSetting])
+      if (data) setConstraints(prev => [...prev, data as ConstraintSetting])
     }
   }
 

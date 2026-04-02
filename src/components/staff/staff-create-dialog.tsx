@@ -18,12 +18,12 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { UserPlus, Loader2 } from 'lucide-react'
+import { toggleArrayItem } from '@/lib/utils'
 
 type ResponsibleRole = {
   id: string
@@ -61,12 +61,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
   })
 
   const toggleShiftType = (id: string) => {
-    setForm(prev => ({
-      ...prev,
-      allowed_shift_type_ids: prev.allowed_shift_type_ids.includes(id)
-        ? prev.allowed_shift_type_ids.filter(i => i !== id)
-        : [...prev.allowed_shift_type_ids, id],
-    }))
+    setForm(prev => ({ ...prev, allowed_shift_type_ids: toggleArrayItem(prev.allowed_shift_type_ids, id) }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -211,7 +206,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
                 onValueChange={(v) => setForm({ ...form, responsible_role_id: v ?? 'none' })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="なし" />
+                  <span>{form.responsible_role_id === 'none' ? 'なし' : (responsibleRoles.find(r => r.id === form.responsible_role_id)?.name ?? 'なし')}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">なし</SelectItem>
@@ -228,7 +223,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
                 onValueChange={(v) => setForm({ ...form, staff_grade: (v ?? 'full') as 'full' | 'half' | 'new' })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <span>{{ full: 'フル職員', half: '半人前', new: '新人' }[form.staff_grade]}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="full">フル職員</SelectItem>

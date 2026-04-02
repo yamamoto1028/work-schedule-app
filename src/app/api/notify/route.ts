@@ -40,8 +40,7 @@ export async function POST(req: Request) {
 
     // DB 通知挿入（サービスロールで RLS バイパス）
     const service = await createServiceClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service as any).from('notifications').insert(
+    await service.from('notifications').insert(
       staff.map(s => ({
         facility_id: body.facilityId,
         user_id: s.id,

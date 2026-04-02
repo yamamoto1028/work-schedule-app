@@ -12,7 +12,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
@@ -121,8 +120,12 @@ export default function LeaveRequestForm({ facilityId, userId, leaveTypes }: Pro
           <div className="space-y-2">
             <Label>休暇区分 *</Label>
             <Select value={leaveTypeId} onValueChange={(v) => setLeaveTypeId(v ?? '')}>
-              <SelectTrigger>
-                <SelectValue placeholder="区分を選択" />
+              <SelectTrigger className="w-full">
+                <span className={leaveTypeId ? 'text-foreground' : 'text-muted-foreground'}>
+                  {leaveTypeId
+                    ? leaveTypes.find(lt => lt.id === leaveTypeId)?.name
+                    : '区分を選択'}
+                </span>
               </SelectTrigger>
               <SelectContent>
                 {leaveTypes.map((lt) => (

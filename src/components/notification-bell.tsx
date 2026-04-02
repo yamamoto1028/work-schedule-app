@@ -39,8 +39,7 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
 
   // 初期取得
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(supabase as any)
+    supabase
       .from('notifications')
       .select('id, type, message, is_read, created_at')
       .eq('user_id', userId)
@@ -87,8 +86,7 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
     // 未読を既読にする
     const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id)
     if (unreadIds.length === 0) return
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('notifications').update({ is_read: true }).in('id', unreadIds)
+    await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds)
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
   }
 
@@ -107,7 +105,7 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

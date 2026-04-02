@@ -1,4 +1,5 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getMonthRange } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
 // GET /api/leaves/count?facilityId=&leaveTypeId=&yearMonth=YYYY-MM
@@ -18,9 +19,7 @@ export async function GET(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // 翌月初日を算出
-  const [y, m] = yearMonth.split('-').map(Number)
-  const nextMonth = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+  const { start, nextMonthStart } = getMonthRange(yearMonth)
 
   // サービスロールで RLS をバイパス
   const service = await createServiceClient()
@@ -41,8 +40,8 @@ export async function GET(req: Request) {
     .eq('facility_id', facilityId)
     .eq('leave_type_id', leaveTypeId)
     .eq('status', 'approved')
-    .gte('date', `${yearMonth}-01`)
-    .lt('date', nextMonth)
+    .gte('date', start)
+    .lt('date', nextMonthStart)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

@@ -14,10 +14,9 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Plus, Trash2, GripVertical, Sun, Moon } from 'lucide-react'
+import { Plus, Trash2, Sun, Moon } from 'lucide-react'
 
 type ShiftType = {
   id: string
@@ -49,7 +48,6 @@ export default function ShiftTypesSettings({ facilityId, shiftTypes: initialType
     end_time: '',
     time_zone: 'day' as 'day' | 'night',
   })
-  const [saving, setSaving] = useState(false)
 
   const handleAdd = async () => {
     if (!newForm.name || !newForm.short_name) {
@@ -196,7 +194,7 @@ export default function ShiftTypesSettings({ facilityId, shiftTypes: initialType
                 onValueChange={(v) => setNewForm({ ...newForm, time_zone: v as 'day' | 'night' })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <span>{newForm.time_zone === 'day' ? '日中帯' : '夜間帯'}</span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="day">日中帯</SelectItem>

@@ -1,5 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendLeaveApprovedEmail, sendLeaveRejectedEmail } from '@/lib/email'
+import { getMonthRange } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
 // GET /api/leaves?facilityId=&from=&to=&status=
@@ -83,16 +84,15 @@ export async function PATCH(req: Request) {
       if (monthlyLimit !== null) {
         // YYYY-MM から月初・翌月初を算出
         const yearMonth = leave.date.slice(0, 7)
-        const [y, m] = yearMonth.split('-').map(Number)
-        const nextMonth = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+        const { start, nextMonthStart } = getMonthRange(yearMonth)
         const { count } = await supabase
           .from('leave_requests')
           .select('id', { count: 'exact', head: true })
           .eq('facility_id', userData.facility_id!)
           .eq('leave_type_id', leaveTypeId)
           .eq('status', 'approved')
-          .gte('date', `${yearMonth}-01`)
-          .lt('date', nextMonth)
+          .gte('date', start)
+          .lt('date', nextMonthStart)
         if ((count ?? 0) >= monthlyLimit) {
           return NextResponse.json(
             { error: `${ltData?.name ?? '該当区分'} の月間承認上限（${monthlyLimit}件）に達しています` },
@@ -122,8 +122,7 @@ export async function PATCH(req: Request) {
   // アプリ内通知挿入
   if (staffUser) {
     const service = await createServiceClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service as any).from('notifications').insert({
+    await service.from('notifications').insert({
       facility_id: leave.facility_id,
       user_id: leave.user_id,
       type: isApproved ? 'leave_approved' : 'leave_rejected',

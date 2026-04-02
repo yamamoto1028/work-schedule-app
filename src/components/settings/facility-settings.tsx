@@ -18,7 +18,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -84,7 +83,7 @@ export default function FacilitySettings({ facility }: { facility: Facility }) {
               }
             >
               <SelectTrigger>
-                <SelectValue />
+                <span>{form.type === 'hospital' ? '病院' : '介護施設'}</span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="hospital">病院</SelectItem>
