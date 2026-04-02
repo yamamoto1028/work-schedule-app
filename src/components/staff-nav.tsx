@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Calendar, ClipboardList, LogOut, Building2 } from 'lucide-react'
+import { Calendar, ClipboardList, LogOut, Building2, ArrowLeftRight } from 'lucide-react'
+import NotificationBell from '@/components/notification-bell'
 
 const navItems = [
   { href: '/staff/my-shifts', label: '自分のシフト', icon: Calendar },
@@ -15,6 +16,7 @@ const navItems = [
 
 type StaffNavProps = {
   user: {
+    id: string
     display_name: string
     email: string
     avatar_url: string | null
@@ -23,9 +25,10 @@ type StaffNavProps = {
     name: string
     type: string
   } | null
+  isAdmin?: boolean
 }
 
-export default function StaffNav({ user, facility }: StaffNavProps) {
+export default function StaffNav({ user, facility, isAdmin = false }: StaffNavProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -59,6 +62,12 @@ export default function StaffNav({ user, facility }: StaffNavProps) {
         </div>
       )}
 
+      {/* 通知ベル */}
+      <div className="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
+        <span className="text-xs text-gray-500">通知</span>
+        <NotificationBell userId={user.id} role="staff" />
+      </div>
+
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -74,12 +83,25 @@ export default function StaffNav({ user, facility }: StaffNavProps) {
                   : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               )}
             >
-              <Icon className="h-4 w-4 flex-shrink-0" />
+              <Icon className="h-4 w-4 shrink-0" />
               {item.label}
             </Link>
           )
         })}
       </nav>
+
+      {/* 管理者は管理画面へのリンクを表示 */}
+      {isAdmin && (
+        <div className="px-4 py-2 border-t border-gray-700">
+          <Link
+            href="/admin/dashboard"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+          >
+            <ArrowLeftRight className="h-4 w-4 shrink-0" />
+            管理者画面へ
+          </Link>
+        </div>
+      )}
 
       <div className="p-4 border-t border-gray-700">
         <div className="flex items-center gap-3 mb-3">

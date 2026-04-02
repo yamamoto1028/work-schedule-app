@@ -1,16 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
+import { getMonthRange } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Calendar } from 'lucide-react'
 import ShiftConfirmButton from '@/components/staff/shift-confirm-button'
+import MonthNavigation from '@/components/staff/month-navigation'
 
-export default async function MyShiftsPage() {
+export default async function MyShiftsPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const { month: qMonth } = await searchParams
+  const selectedMonth = /^\d{4}-\d{2}$/.test(qMonth ?? '') ? qMonth! : currentMonth
+
+  const { start, nextMonthStart } = getMonthRange(selectedMonth)
 
   const { data: shifts } = await supabase
     .from('shifts')
@@ -19,18 +25,19 @@ export default async function MyShiftsPage() {
       shift_types(name, short_name, color, time_zone)
     `)
     .eq('user_id', user.id)
-    .gte('date', `${currentMonth}-01`)
-    .lte('date', `${currentMonth}-31`)
+    .gte('date', start)
+    .lt('date', nextMonthStart)
     .in('status', ['published', 'confirmed'])
     .order('date')
 
-  const monthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`
+  const [year, month] = selectedMonth.split('-').map(Number)
+  const monthLabel = `${year}年${month}月`
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-900">自分のシフト</h1>
-        <p className="text-gray-500 mt-1">{monthLabel}のシフトを確認できます</p>
+        <MonthNavigation selectedMonth={selectedMonth} />
       </div>
 
       {shifts && shifts.length > 0 ? (

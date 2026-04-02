@@ -25,12 +25,12 @@ export default async function ShiftsPage() {
       .select(`
         id, display_name,
         staff_profiles(
-          employment_type, position, can_night_shift, staff_grade,
+          employment_type, position, can_night_shift, staff_grade, allowed_shift_type_ids,
           responsible_roles(name, color)
         )
       `)
       .eq('facility_id', facilityId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .eq('is_active', true)
       .order('created_at'),
     supabase

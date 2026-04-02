@@ -10,6 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Claude Code でタスクを実行する際の役割分担・実行ルール・禁止事項を定義する。  
 各エージェントは作業開始前に必ず `REQUIREMENTS.md` の該当セクションを確認すること。
+チャットは日本語で対応すること。
 
 ---
 

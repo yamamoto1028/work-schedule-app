@@ -88,6 +88,7 @@ export type Database = {
           phone: string | null
           staff_grade: 'full' | 'half' | 'new'
           fixed_night_count: number | null
+          allowed_shift_type_ids: string[]
           updated_at: string
         }
         Insert: {
@@ -103,6 +104,7 @@ export type Database = {
           phone?: string | null
           staff_grade?: 'full' | 'half' | 'new'
           fixed_night_count?: number | null
+          allowed_shift_type_ids?: string[]
           updated_at?: string
         }
         Update: {
@@ -118,6 +120,7 @@ export type Database = {
           phone?: string | null
           staff_grade?: 'full' | 'half' | 'new'
           fixed_night_count?: number | null
+          allowed_shift_type_ids?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -192,6 +195,7 @@ export type Database = {
           is_default: boolean
           is_active: boolean
           sort_order: number
+          monthly_limit: number | null
           created_at: string
         }
         Insert: {
@@ -203,6 +207,7 @@ export type Database = {
           is_default?: boolean
           is_active?: boolean
           sort_order?: number
+          monthly_limit?: number | null
           created_at?: string
         }
         Update: {
@@ -214,6 +219,7 @@ export type Database = {
           is_default?: boolean
           is_active?: boolean
           sort_order?: number
+          monthly_limit?: number | null
           created_at?: string
         }
         Relationships: []
@@ -445,6 +451,36 @@ export type Database = {
           date?: string
           extra_staff?: Json
           note?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          facility_id: string
+          user_id: string
+          type: string
+          message: string
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          facility_id: string
+          user_id: string
+          type: string
+          message: string
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          facility_id?: string
+          user_id?: string
+          type?: string
+          message?: string
+          is_read?: boolean
           created_at?: string
         }
         Relationships: []
