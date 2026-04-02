@@ -51,7 +51,7 @@ export default function AdminNav({ user, facility }: AdminNavProps) {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col">
+    <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col z-30">
       {/* ロゴ */}
       <div className="p-6 border-b border-gray-700">
         <div className="flex items-center gap-3">
@@ -80,6 +80,12 @@ export default function AdminNav({ user, facility }: AdminNavProps) {
         </div>
       )}
 
+      {/* 通知ベル */}
+      <div className="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
+        <span className="text-xs text-gray-500">通知</span>
+        <NotificationBell userId={user.id} />
+      </div>
+
       {/* ナビゲーション */}
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
@@ -102,12 +108,6 @@ export default function AdminNav({ user, facility }: AdminNavProps) {
           );
         })}
       </nav>
-
-      {/* 通知ベル */}
-      <div className="px-4 py-2 border-t border-gray-700 flex items-center justify-between">
-        <span className="text-xs text-gray-500">通知</span>
-        <NotificationBell userId={user.id} />
-      </div>
 
       {/* 全管理者向けスタッフ画面リンク（自分のシフト・休暇申請） */}
       <div className="px-4 py-2 border-t border-gray-700">

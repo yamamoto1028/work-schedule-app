@@ -24,6 +24,7 @@ type StaffMember = {
     position: string | null
     can_night_shift: boolean
     staff_grade: 'full' | 'half' | 'new'
+    allowed_shift_type_ids: string[]
     responsible_roles: { name: string; color: string } | null
   } | null
 }
@@ -195,9 +196,12 @@ export default function ShiftCalendarGrid({
                     })()}
                     {member.staff_profiles?.responsible_roles && (
                       <span
-                        className="inline-block w-2 h-2 rounded-full shrink-0"
+                        className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0 text-white"
                         style={{ backgroundColor: member.staff_profiles.responsible_roles.color }}
-                      />
+                        title={member.staff_profiles.responsible_roles.name}
+                      >
+                        {member.staff_profiles.responsible_roles.name}
+                      </span>
                     )}
                     <span className="font-medium text-gray-800 truncate max-w-[100px]">{member.display_name}</span>
                   </div>

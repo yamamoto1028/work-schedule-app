@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Calendar, ClipboardList, LogOut, Building2, ArrowLeftRight } from 'lucide-react'
+import NotificationBell from '@/components/notification-bell'
 
 const navItems = [
   { href: '/staff/my-shifts', label: '自分のシフト', icon: Calendar },
@@ -15,6 +16,7 @@ const navItems = [
 
 type StaffNavProps = {
   user: {
+    id: string
     display_name: string
     email: string
     avatar_url: string | null
@@ -60,6 +62,12 @@ export default function StaffNav({ user, facility, isAdmin = false }: StaffNavPr
         </div>
       )}
 
+      {/* 通知ベル */}
+      <div className="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
+        <span className="text-xs text-gray-500">通知</span>
+        <NotificationBell userId={user.id} role="staff" />
+      </div>
+
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -75,7 +83,7 @@ export default function StaffNav({ user, facility, isAdmin = false }: StaffNavPr
                   : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               )}
             >
-              <Icon className="h-4 w-4 flex-shrink-0" />
+              <Icon className="h-4 w-4 shrink-0" />
               {item.label}
             </Link>
           )

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Check, X, Loader2 } from 'lucide-react'
+import { Check, X, Loader2, RotateCcw } from 'lucide-react'
 
 type LeaveRequest = {
   id: string
@@ -40,7 +40,8 @@ export default function LeaveManagement({ leaves: initialLeaves }: Props) {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [processing, setProcessing] = useState<string | null>(null)
 
-  const handleAction = async (id: string, status: 'approved' | 'rejected') => {
+  const handleAction = async (id: string, status: 'approved' | 'rejected' | 'pending') => {
+    if (status === 'pending' && !window.confirm('承認を取り消して申請待ちに戻しますか？')) return
     setProcessing(id)
     try {
       const res = await fetch('/api/leaves', {
@@ -48,12 +49,16 @@ export default function LeaveManagement({ leaves: initialLeaves }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        window.alert(body.error ?? '処理に失敗しました')
+        return
+      }
       setLeaves(prev => prev.map(l => l.id === id ? { ...l, status } : l))
-      toast.success(status === 'approved' ? '承認しました' : '却下しました')
+      toast.success(status === 'approved' ? '承認しました' : status === 'rejected' ? '却下しました' : '申請待ちに戻しました')
       router.refresh()
     } catch {
-      toast.error('処理に失敗しました')
+      window.alert('処理に失敗しました')
     } finally {
       setProcessing(null)
     }
@@ -142,6 +147,18 @@ export default function LeaveManagement({ leaves: initialLeaves }: Props) {
                         却下
                       </Button>
                     </div>
+                  )}
+                  {leave.status === 'approved' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAction(leave.id, 'pending')}
+                      disabled={processing === leave.id}
+                      className="shrink-0 text-yellow-700 border-yellow-300 hover:bg-yellow-50 h-8 gap-1"
+                    >
+                      {processing === leave.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                      差し戻す
+                    </Button>
                   )}
                 </div>
               </CardContent>

@@ -195,6 +195,7 @@ export type Database = {
           is_default: boolean
           is_active: boolean
           sort_order: number
+          monthly_limit: number | null
           created_at: string
         }
         Insert: {
@@ -206,6 +207,7 @@ export type Database = {
           is_default?: boolean
           is_active?: boolean
           sort_order?: number
+          monthly_limit?: number | null
           created_at?: string
         }
         Update: {
@@ -217,6 +219,7 @@ export type Database = {
           is_default?: boolean
           is_active?: boolean
           sort_order?: number
+          monthly_limit?: number | null
           created_at?: string
         }
         Relationships: []

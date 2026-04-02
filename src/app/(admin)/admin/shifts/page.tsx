@@ -30,7 +30,7 @@ export default async function ShiftsPage() {
         )
       `)
       .eq('facility_id', facilityId)
-      .eq('role', 'staff')
+      .in('role', ['staff', 'admin'])
       .eq('is_active', true)
       .order('created_at'),
     supabase

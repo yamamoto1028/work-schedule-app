@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -20,6 +20,7 @@ type LeaveType = {
   is_default: boolean
   is_active: boolean
   sort_order: number
+  monthly_limit: number | null
 }
 
 type Props = {
@@ -31,6 +32,11 @@ export default function LeaveTypesSettings({ facilityId, leaveTypes: initialType
   const router = useRouter()
   const [leaveTypes, setLeaveTypes] = useState(initialTypes)
   const [newForm, setNewForm] = useState({ name: '', color: '#888888' })
+
+  // サーバー再フェッチ後に最新データを反映
+  useEffect(() => {
+    setLeaveTypes(initialTypes)
+  }, [initialTypes])
 
   const handleAdd = async () => {
     if (!newForm.name) {
@@ -56,7 +62,7 @@ export default function LeaveTypesSettings({ facilityId, leaveTypes: initialType
       toast.error('追加に失敗しました')
       return
     }
-    setLeaveTypes([...leaveTypes, data])
+    setLeaveTypes([...leaveTypes, { ...data, monthly_limit: null }])
     setNewForm({ name: '', color: '#888888' })
     toast.success('休暇区分を追加しました')
     router.refresh()
@@ -81,6 +87,24 @@ export default function LeaveTypesSettings({ facilityId, leaveTypes: initialType
     router.refresh()
   }
 
+  const handleUpdateLimit = async (id: string) => {
+    const lt = leaveTypes.find(t => t.id === id)
+    if (!lt) return
+    const limit = lt.monthly_limit
+    if (limit !== null && (isNaN(limit) || limit < 1)) {
+      toast.error('1以上の数値を入力してください')
+      return
+    }
+    const supabase = createClient()
+    const { error } = await supabase.from('leave_types').update({ monthly_limit: limit }).eq('id', id)
+    if (error) {
+      toast.error('更新に失敗しました')
+      return
+    }
+    toast.success('月上限数を保存しました')
+    router.refresh()
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -95,7 +119,7 @@ export default function LeaveTypesSettings({ facilityId, leaveTypes: initialType
           {leaveTypes.map((lt) => (
             <div key={lt.id} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
               <div
-                className="w-3 h-10 rounded-full flex-shrink-0"
+                className="w-3 h-10 rounded-full shrink-0"
                 style={{ backgroundColor: lt.color }}
               />
               <div className="flex-1">
@@ -108,6 +132,28 @@ export default function LeaveTypesSettings({ facilityId, leaveTypes: initialType
                   )}
                 </div>
                 <div className="text-xs text-gray-400">{lt.key}</div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-xs text-gray-500 whitespace-nowrap">月上限</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={lt.monthly_limit ?? ''}
+                  onChange={(e) => setLeaveTypes(prev => prev.map(t =>
+                    t.id === lt.id ? { ...t, monthly_limit: e.target.value === '' ? null : parseInt(e.target.value, 10) } : t
+                  ))}
+                  placeholder="無制限"
+                  className="w-20 h-8 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs px-2 shrink-0"
+                  onClick={() => handleUpdateLimit(lt.id)}
+                >
+                  保存
+                </Button>
               </div>
               <Switch
                 checked={lt.is_active}

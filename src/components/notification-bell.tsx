@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Bell } from 'lucide-react'
 
@@ -12,7 +13,23 @@ type Notification = {
   created_at: string
 }
 
-export default function NotificationBell({ userId }: { userId: string }) {
+const adminTypeRoute: Record<string, string> = {
+  shift_published: '/admin/shifts',
+  leave_approved: '/admin/leaves',
+  leave_rejected: '/admin/leaves',
+  leave_requested: '/admin/leaves',
+}
+
+const staffTypeRoute: Record<string, string> = {
+  shift_published: '/staff/my-shifts',
+  leave_approved: '/staff/requests',
+  leave_rejected: '/staff/requests',
+  leave_requested: '/staff/requests',
+}
+
+export default function NotificationBell({ userId, role = 'admin' }: { userId: string; role?: 'admin' | 'staff' }) {
+  const typeRoute = role === 'staff' ? staffTypeRoute : adminTypeRoute
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -97,7 +114,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute left-0 top-11 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-9999 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <span className="font-semibold text-sm text-gray-800">通知</span>
             {unreadCount === 0 && notifications.length > 0 && (
@@ -109,7 +126,11 @@ export default function NotificationBell({ userId }: { userId: string }) {
               <div className="py-8 text-center text-sm text-gray-400">通知はありません</div>
             ) : (
               notifications.map(n => (
-                <div key={n.id} className={`px-4 py-3 ${n.is_read ? '' : 'bg-emerald-50'}`}>
+                <div
+                  key={n.id}
+                  onClick={() => { setOpen(false); router.push(typeRoute[n.type] ?? '/admin/shifts') }}
+                  className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${n.is_read ? '' : 'bg-emerald-50 hover:bg-emerald-50/70'}`}
+                >
                   <div className="flex items-start gap-2">
                     <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded shrink-0 mt-0.5">
                       {typeLabel[n.type] ?? n.type}

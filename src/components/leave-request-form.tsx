@@ -25,6 +25,7 @@ type LeaveType = {
   id: string
   name: string
   color: string
+  monthly_limit: number | null
 }
 
 type Props = {
@@ -40,12 +41,33 @@ export default function LeaveRequestForm({ facilityId, userId, leaveTypes }: Pro
   const [leaveTypeId, setLeaveTypeId] = useState('')
   const [reason, setReason] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!date || !leaveTypeId) {
       toast.error('日付と休暇区分は必須です')
       return
     }
+    const selectedType = leaveTypes.find(lt => lt.id === leaveTypeId)
+    const leaveTypeName = selectedType?.name ?? '選択中の区分'
+    const dateLabel = format(date, 'yyyy年M月d日', { locale: ja })
+
+    // 月上限チェック（DB から直接取得し RLS をバイパス）
+    const yearMonth = format(date, 'yyyy-MM')
+    try {
+      const limitRes = await fetch(
+        `/api/leaves/count?facilityId=${facilityId}&leaveTypeId=${leaveTypeId}&yearMonth=${yearMonth}`
+      )
+      const { count, limit } = await limitRes.json() as { count: number; limit: number | null }
+      if (limit !== null && count >= limit) {
+        window.alert(`${leaveTypeName} は今月の承認上限（${limit}件）に達しているため申請できません。`)
+        return
+      }
+    } catch {
+      window.alert('上限チェックに失敗しました。再度お試しください。')
+      return
+    }
+
+    if (!window.confirm(`${dateLabel}（${leaveTypeName}）で休暇申請を送信しますか？`)) return
     setLoading(true)
     const supabase = createClient()
 
@@ -91,7 +113,6 @@ export default function LeaveRequestForm({ facilityId, userId, leaveTypes }: Pro
                   selected={date}
                   onSelect={setDate}
                   locale={ja}
-                  initialFocus
                 />
               </PopoverContent>
             </Popover>
@@ -107,7 +128,7 @@ export default function LeaveRequestForm({ facilityId, userId, leaveTypes }: Pro
                 {leaveTypes.map((lt) => (
                   <SelectItem key={lt.id} value={lt.id}>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: lt.color }} />
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: lt.color }} />
                       {lt.name}
                     </div>
                   </SelectItem>

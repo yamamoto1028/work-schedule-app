@@ -43,32 +43,32 @@ export default async function SettingsPage() {
           <TabsTrigger value="constraints">制約設定</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="facility" className="mt-6">
+        <TabsContent value="facility" className="mt-6" keepMounted>
           <FacilitySettings facility={facilityResult.data!} />
         </TabsContent>
 
-        <TabsContent value="shift-types" className="mt-6">
+        <TabsContent value="shift-types" className="mt-6" keepMounted>
           <ShiftTypesSettings
             facilityId={facilityId}
             shiftTypes={shiftTypesResult.data ?? []}
           />
         </TabsContent>
 
-        <TabsContent value="leave-types" className="mt-6">
+        <TabsContent value="leave-types" className="mt-6" keepMounted>
           <LeaveTypesSettings
             facilityId={facilityId}
             leaveTypes={leaveTypesResult.data ?? []}
           />
         </TabsContent>
 
-        <TabsContent value="responsible-roles" className="mt-6">
+        <TabsContent value="responsible-roles" className="mt-6" keepMounted>
           <ResponsibleRolesSettings
             facilityId={facilityId}
             responsibleRoles={responsibleRolesResult.data ?? []}
           />
         </TabsContent>
 
-        <TabsContent value="constraints" className="mt-6">
+        <TabsContent value="constraints" className="mt-6" keepMounted>
           <ConstraintSettings
             facilityId={facilityId}
             constraints={constraintResult.data ?? []}

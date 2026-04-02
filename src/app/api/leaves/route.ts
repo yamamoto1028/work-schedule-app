@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 
 // PATCH /api/leaves  body: { id, status: 'approved'|'rejected' }
 export async function PATCH(req: Request) {
-  const body = await req.json() as { id: string; status: 'approved' | 'rejected' }
+  const body = await req.json() as { id: string; status: 'approved' | 'rejected' | 'pending' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -57,12 +57,51 @@ export async function PATCH(req: Request) {
   // 申請情報取得（メール送信用）
   const { data: leave, error: leaveError } = await supabase
     .from('leave_requests')
-    .select('id, date, facility_id, user_id, leave_types(name), users!user_id(email, display_name)')
+    .select('id, date, facility_id, user_id, leave_type_id, leave_types(name), users!user_id(email, display_name)')
     .eq('id', body.id)
     .eq('facility_id', userData.facility_id!)
     .single()
 
   if (leaveError || !leave) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // 差し戻し（pending に戻す）は上限チェック・通知なしで即更新
+  if (body.status === 'pending') {
+    await supabase.from('leave_requests').update({ status: 'pending', reviewed_by: null }).eq('id', body.id)
+    return NextResponse.json({ ok: true })
+  }
+
+  // 承認時：月上限チェック
+  if (body.status === 'approved') {
+    const leaveTypeId = leave.leave_type_id
+    if (leaveTypeId) {
+      const { data: ltData } = await supabase
+        .from('leave_types')
+        .select('monthly_limit, name')
+        .eq('id', leaveTypeId)
+        .single()
+      const monthlyLimit: number | null = ltData?.monthly_limit ?? null
+      if (monthlyLimit !== null) {
+        // YYYY-MM から月初・翌月初を算出
+        const yearMonth = leave.date.slice(0, 7)
+        const [y, m] = yearMonth.split('-').map(Number)
+        const nextMonth = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+        const { count } = await supabase
+          .from('leave_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('facility_id', userData.facility_id!)
+          .eq('leave_type_id', leaveTypeId)
+          .eq('status', 'approved')
+          .gte('date', `${yearMonth}-01`)
+          .lt('date', nextMonth)
+        if ((count ?? 0) >= monthlyLimit) {
+          return NextResponse.json(
+            { error: `${ltData?.name ?? '該当区分'} の月間承認上限（${monthlyLimit}件）に達しています` },
+            { status: 422 }
+          )
+        }
+      }
+    }
+  }
 
   // ステータス更新
   const { error: updateError } = await supabase
