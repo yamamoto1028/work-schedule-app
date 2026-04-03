@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -55,10 +56,12 @@ export default function AdminNav({ user, facility }: AdminNavProps) {
       {/* ロゴ */}
       <div className="p-6 border-b border-gray-700">
         <div className="flex items-center gap-3">
-          <img
+          <Image
             src="/logo_graffit.png"
             alt="YOMOGI"
-            className="w-9 h-9 rounded-lg object-cover"
+            width={36}
+            height={36}
+            className="rounded-lg object-cover"
           />
           <div>
             <div className="font-bold text-lg leading-tight">YOMOGI</div>

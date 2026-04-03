@@ -33,12 +33,11 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
-
   const unreadCount = notifications.filter(n => !n.is_read).length
 
   // 初期取得
   useEffect(() => {
+    const supabase = createClient()
     supabase
       .from('notifications')
       .select('id, type, message, is_read, created_at')
@@ -52,6 +51,7 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
 
   // Realtime 購読
   useEffect(() => {
+    const supabase = createClient()
     const channel = supabase
       .channel(`notifications:${userId}`)
       .on(
@@ -86,7 +86,7 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
     // 未読を既読にする
     const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id)
     if (unreadIds.length === 0) return
-    await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds)
+    await createClient().from('notifications').update({ is_read: true }).in('id', unreadIds)
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
   }
 

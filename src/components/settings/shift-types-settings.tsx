@@ -114,7 +114,7 @@ export default function ShiftTypesSettings({ facilityId, shiftTypes: initialType
             shiftTypes.map((st) => (
               <div key={st.id} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
                 <div
-                  className="w-3 h-10 rounded-full flex-shrink-0"
+                  className="w-3 h-10 rounded-full shrink-0"
                   style={{ backgroundColor: st.color }}
                 />
                 <div className="flex-1 min-w-0">
@@ -141,12 +141,12 @@ export default function ShiftTypesSettings({ facilityId, shiftTypes: initialType
                 <Switch
                   checked={st.is_active}
                   onCheckedChange={() => handleToggleActive(st.id, st.is_active)}
-                  className="flex-shrink-0"
+                  className="shrink-0"
                 />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
+                  className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
                   onClick={() => handleDelete(st.id)}
                 >
                   <Trash2 className="h-4 w-4" />

@@ -13,7 +13,8 @@ export default async function ShiftsPage() {
     .eq('id', user.id)
     .single()
 
-  const facilityId = userData?.facility_id!
+  if (!userData?.facility_id) redirect('/login')
+  const facilityId = userData.facility_id
 
   const now = new Date()
   const year = now.getFullYear()

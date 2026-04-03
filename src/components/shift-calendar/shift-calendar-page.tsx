@@ -104,8 +104,8 @@ export default function ShiftCalendarPage({
   }, [facilityId, supabase])
 
   useEffect(() => {
-    fetchShifts()
-    fetchConstraints()
+    void fetchShifts()
+    void fetchConstraints()
   }, [fetchShifts, fetchConstraints])
 
   // 制約チェック（シフト変更時に再計算）
@@ -139,6 +139,7 @@ export default function ShiftCalendarPage({
     const shiftTypeNames = new Map(shiftTypes.map(t => [t.id, t.name]))
     const v = checkConstraints(entries, constraints, year, month, shiftTypeNames)
     setViolations(v)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shifts, constraints, shiftTypes, year, month])
 
   const goToPrevMonth = () => {
@@ -315,7 +316,7 @@ export default function ShiftCalendarPage({
             <Button variant="outline" size="icon" onClick={goToPrevMonth} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-lg font-semibold px-2 min-w-[120px] text-center">
+            <span className="text-lg font-semibold px-2 min-w-30 text-center">
               {year}年{month}月
             </span>
             <Button variant="outline" size="icon" onClick={goToNextMonth} className="h-8 w-8">

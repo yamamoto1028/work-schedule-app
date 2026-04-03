@@ -17,7 +17,8 @@ export default async function SettingsPage() {
     .eq('id', user.id)
     .single()
 
-  const facilityId = userData?.facility_id!
+  if (!userData?.facility_id) return null
+  const facilityId = userData.facility_id
 
   const [facilityResult, shiftTypesResult, leaveTypesResult, responsibleRolesResult, constraintResult] = await Promise.all([
     supabase.from('facilities').select('*').eq('id', facilityId).single(),

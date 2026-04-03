@@ -14,7 +14,8 @@ export default async function StaffPage() {
     .eq('id', user.id)
     .single()
 
-  const facilityId = userData?.facility_id!
+  if (!userData?.facility_id) return null
+  const facilityId = userData.facility_id
 
   const [staffResult, responsibleRolesResult, shiftTypesResult] = await Promise.all([
     supabase

@@ -130,7 +130,7 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
             roles.map((role) => (
               <div key={role.id} className="p-4 border rounded-lg bg-gray-50 space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: role.color }} />
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: role.color }} />
                   <span className="font-medium flex-1">{role.name}</span>
                   <Switch
                     checked={role.is_active}

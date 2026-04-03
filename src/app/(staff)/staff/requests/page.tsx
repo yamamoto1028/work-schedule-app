@@ -13,7 +13,8 @@ export default async function RequestsPage() {
     .eq('id', user.id)
     .single()
 
-  const facilityId = userData?.facility_id!
+  if (!userData?.facility_id) return null
+  const facilityId = userData.facility_id
 
   const [leaveTypesResult, requestsResult] = await Promise.all([
     supabase.from('leave_types').select('*').eq('facility_id', facilityId).eq('is_active', true).order('sort_order'),

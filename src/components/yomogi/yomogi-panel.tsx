@@ -202,7 +202,7 @@ export default function YomogiPanel({
             "\n\nシフトデータの解析に失敗してしもうた…もう一回やってみんさい。",
         );
       }
-    } catch (err) {
+    } catch {
       setStatus("error");
       setCommentary("困ったのぉ…通信エラーじゃわ。");
     }
@@ -218,7 +218,7 @@ export default function YomogiPanel({
   const facilityLabel = facilityType === "hospital" ? "病院" : "介護施設";
 
   return (
-    <div className="border rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-sm">
+    <div className="border rounded-xl bg-linear-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-sm">
       {/* ヘッダー */}
       <button
         className="w-full flex items-center justify-between px-4 py-3"
