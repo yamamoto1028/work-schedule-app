@@ -98,6 +98,7 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
 
   return (
     <>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50">
@@ -192,6 +193,7 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
           )}
         </TableBody>
       </Table>
+      </div>
 
       {editTarget && (
         <StaffEditDialog

@@ -1,12 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Calendar, ClipboardList, LogOut, Building2, ArrowLeftRight } from 'lucide-react'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Calendar, ClipboardList, LogOut, Building2, ArrowLeftRight, Menu } from 'lucide-react'
 import NotificationBell from '@/components/notification-bell'
 
 const navItems = [
@@ -28,19 +30,23 @@ type StaffNavProps = {
   isAdmin?: boolean
 }
 
-export default function StaffNav({ user, facility, isAdmin = false }: StaffNavProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
-
+function NavContent({
+  user,
+  facility,
+  pathname,
+  isAdmin,
+  onLogout,
+  onNavigate,
+}: {
+  user: StaffNavProps['user']
+  facility: StaffNavProps['facility']
+  pathname: string
+  isAdmin: boolean
+  onLogout: () => void
+  onNavigate?: () => void
+}) {
   return (
-    <aside className="fixed left-0 top-0 h-full w-56 bg-gray-900 text-white flex flex-col">
+    <div className="flex flex-col h-full">
       <div className="p-6 border-b border-gray-700">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-sm font-bold">
@@ -76,6 +82,7 @@ export default function StaffNav({ user, facility, isAdmin = false }: StaffNavPr
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
                 isActive
@@ -90,11 +97,11 @@ export default function StaffNav({ user, facility, isAdmin = false }: StaffNavPr
         })}
       </nav>
 
-      {/* 管理者は管理画面へのリンクを表示 */}
       {isAdmin && (
         <div className="px-4 py-2 border-t border-gray-700">
           <Link
             href="/admin/dashboard"
+            onClick={onNavigate}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
           >
             <ArrowLeftRight className="h-4 w-4 shrink-0" />
@@ -118,12 +125,71 @@ export default function StaffNav({ user, facility, isAdmin = false }: StaffNavPr
           variant="ghost"
           size="sm"
           className="w-full justify-start text-gray-400 hover:text-white hover:bg-gray-800"
-          onClick={handleLogout}
+          onClick={onLogout}
         >
           <LogOut className="h-4 w-4 mr-2" />
           ログアウト
         </Button>
       </div>
-    </aside>
+    </div>
+  )
+}
+
+export default function StaffNav({ user, facility, isAdmin = false }: StaffNavProps) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
+  return (
+    <>
+      {/* デスクトップ: 固定サイドバー */}
+      <aside className="hidden md:flex fixed left-0 top-0 h-full w-56 bg-gray-900 text-white flex-col">
+        <NavContent
+          user={user}
+          facility={facility}
+          pathname={pathname}
+          isAdmin={isAdmin}
+          onLogout={handleLogout}
+        />
+      </aside>
+
+      {/* モバイル: トップバー */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-gray-900 text-white flex items-center justify-between px-4 z-30">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center text-xs font-bold">
+            よ
+          </div>
+          <span className="font-bold text-base">YOMOGI</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <NotificationBell userId={user.id} role="staff" />
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger className="inline-flex items-center justify-center h-9 w-9 rounded-md text-white hover:bg-gray-800">
+              <Menu className="h-5 w-5" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-56 p-0 bg-gray-900 text-white border-gray-700">
+              <NavContent
+                user={user}
+                facility={facility}
+                pathname={pathname}
+                isAdmin={isAdmin}
+                onLogout={handleLogout}
+                onNavigate={() => setOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+
+      {/* モバイル: トップバー分のスペーサー */}
+      <div className="md:hidden h-14" />
+    </>
   )
 }
