@@ -344,14 +344,15 @@ export default function ShiftCalendarPage({
   return (
     <div className="flex flex-col gap-4">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col min-[1120px]:flex-row min-[1120px]:items-center min-[1120px]:justify-between gap-3">
+        {/* 左: タイトル + 月ナビ */}
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">シフト管理</h1>
+          <h1 className="text-xl min-[1120px]:text-2xl font-bold text-gray-900 shrink-0">シフト管理</h1>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={goToPrevMonth} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-lg font-semibold px-2 min-w-30 text-center">
+            <span className="text-base min-[1120px]:text-lg font-semibold px-2 min-w-24 text-center">
               {year}年{month}月
             </span>
             <Button variant="outline" size="icon" onClick={goToNextMonth} className="h-8 w-8">
@@ -360,7 +361,8 @@ export default function ShiftCalendarPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* 右: 操作エリア（モバイルは flex-wrap で折り返し） */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* 表示切替 */}
           <div className="flex border rounded-lg overflow-hidden">
             <Button

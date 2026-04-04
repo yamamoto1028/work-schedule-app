@@ -36,7 +36,7 @@ export default async function SettingsPage() {
       </div>
 
       <Tabs defaultValue="shift-types">
-        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full max-w-2xl">
           <TabsTrigger value="facility">施設情報</TabsTrigger>
           <TabsTrigger value="shift-types">勤務区分</TabsTrigger>
           <TabsTrigger value="leave-types">休暇区分</TabsTrigger>

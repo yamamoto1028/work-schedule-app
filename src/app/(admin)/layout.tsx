@@ -24,7 +24,7 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNav user={userData} facility={userData.facilities} />
-      <main className="ml-64 p-8">
+      <main className="md:ml-64 p-4 md:p-8">
         {children}
       </main>
     </div>
