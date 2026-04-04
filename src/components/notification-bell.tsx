@@ -50,10 +50,13 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
   }, [userId])
 
   // Realtime 購読
+  // チャンネル名にユニークIDを付与: Strict Mode の二重マウントで
+  // 同名チャンネルが subscribe 済みの状態で .on() を呼ぶとエラーになるため
   useEffect(() => {
     const supabase = createClient()
+    const channelId = `${userId}:${Date.now()}`
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${channelId}`)
       .on(
         'postgres_changes',
         {
