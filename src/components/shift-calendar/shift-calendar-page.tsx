@@ -417,7 +417,7 @@ export default function ShiftCalendarPage({
           </Button>
 
           {/* 白紙に戻すボタン */}
-          {hasDraft && !hasPublished && (
+          {hasDraft && (
             <Button
               variant="outline"
               onClick={handleClearAll}
