@@ -9,7 +9,7 @@ import ShiftListView from './shift-list-view'
 import YomogiPanel from '@/components/yomogi/yomogi-panel'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2, FileDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2, FileDown, BellRing } from 'lucide-react'
 import type { GeneratedShift, DissatisfactionScore, AIFixedShiftInput } from '@/lib/ai/yomogi'
 
 type StaffMember = {
@@ -65,6 +65,7 @@ export default function ShiftCalendarPage({
   const [violations, setViolations] = useState<ConstraintViolation[]>([])
   const [publishing, setPublishing] = useState(false)
   const [unpublishing, setUnpublishing] = useState(false)
+  const [reminding, setReminding] = useState(false)
   const [dissatisfactionScores, setDissatisfactionScores] = useState<Map<string, number>>(new Map())
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
@@ -276,6 +277,16 @@ export default function ShiftCalendarPage({
     setExporting(false)
   }
 
+  const handleRemind = async () => {
+    setReminding(true)
+    await fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'shift_confirmation_reminder', facilityId, year, month }),
+    }).catch(() => null)
+    setReminding(false)
+  }
+
   const handleClearAll = async () => {
     if (!window.confirm(`${year}年${month}月の下書きシフトをすべて白紙に戻します。よろしいですか？`)) return
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
@@ -311,6 +322,7 @@ export default function ShiftCalendarPage({
   const warningCount = violations.filter(v => v.severity === 'warning').length
   const hasDraft = shifts.some(s => s.status === 'draft')
   const hasPublished = shifts.some(s => s.status === 'published')
+  const unconfirmedCount = new Set(shifts.filter(s => s.status === 'published').map(s => s.user_id)).size
 
   const aiStaff = staff.map(s => ({
     id: s.id,
@@ -425,6 +437,19 @@ export default function ShiftCalendarPage({
             >
               <Trash2 className="h-4 w-4" />
               白紙に戻す
+            </Button>
+          )}
+
+          {/* 確認督促ボタン */}
+          {hasPublished && unconfirmedCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleRemind}
+              disabled={reminding}
+              className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              {reminding ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />}
+              督促を送る（{unconfirmedCount}名）
             </Button>
           )}
 

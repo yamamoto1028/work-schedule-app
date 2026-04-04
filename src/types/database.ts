@@ -16,6 +16,10 @@ export type Database = {
           type: 'hospital' | 'care_facility'
           logo_url: string | null
           created_at: string
+          reminder_enabled: boolean
+          reminder_hour_jst: number
+          leave_deadline_day: number | null
+          leave_min_wishes: number
         }
         Insert: {
           id?: string
@@ -23,6 +27,10 @@ export type Database = {
           type: 'hospital' | 'care_facility'
           logo_url?: string | null
           created_at?: string
+          reminder_enabled?: boolean
+          reminder_hour_jst?: number
+          leave_deadline_day?: number | null
+          leave_min_wishes?: number
         }
         Update: {
           id?: string
@@ -30,6 +38,10 @@ export type Database = {
           type?: 'hospital' | 'care_facility'
           logo_url?: string | null
           created_at?: string
+          reminder_enabled?: boolean
+          reminder_hour_jst?: number
+          leave_deadline_day?: number | null
+          leave_min_wishes?: number
         }
         Relationships: []
       }
@@ -194,6 +206,7 @@ export type Database = {
           color: string
           is_default: boolean
           is_active: boolean
+          is_wish: boolean
           sort_order: number
           monthly_limit: number | null
           created_at: string
@@ -206,6 +219,7 @@ export type Database = {
           color?: string
           is_default?: boolean
           is_active?: boolean
+          is_wish?: boolean
           sort_order?: number
           monthly_limit?: number | null
           created_at?: string
@@ -218,6 +232,7 @@ export type Database = {
           color?: string
           is_default?: boolean
           is_active?: boolean
+          is_wish?: boolean
           sort_order?: number
           monthly_limit?: number | null
           created_at?: string

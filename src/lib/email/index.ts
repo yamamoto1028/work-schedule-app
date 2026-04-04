@@ -78,6 +78,63 @@ export async function sendLeaveApprovedEmail(
   )
 }
 
+/** 確認督促通知（未確認スタッフへ一括送信） */
+export async function sendShiftReminderEmails(
+  staffEmails: { email: string; displayName: string }[],
+  year: number,
+  month: number,
+  facilityName: string,
+) {
+  if (staffEmails.length === 0) return
+  await Promise.allSettled(
+    staffEmails.map(({ email, displayName }) =>
+      send(
+        email,
+        `【YOMOGI】${year}年${month}月のシフト確認をお願いします`,
+        html(`
+<h2 style="color:#d97706;">シフトの確認をお願いします</h2>
+<p>${displayName} さん、</p>
+<p><strong>${facilityName}</strong> の ${year}年${month}月のシフトがまだ確認されていません。</p>
+<p>以下のリンクからシフトをご確認の上、「確認しました」ボタンを押してください。</p>
+<a href="${APP_URL}/staff/my-shifts" style="display:inline-block;background:#d97706;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;margin-top:8px;">シフトを確認する</a>
+`),
+      )
+    )
+  )
+}
+
+/** 希望休申請督促通知 */
+export async function sendLeaveWishReminderEmails(
+  staffEmails: { email: string; displayName: string; submittedCount: number }[],
+  targetYear: number,
+  targetMonth: number,
+  minWishes: number,
+  deadlineDay: number,
+  facilityName: string,
+) {
+  if (staffEmails.length === 0) return
+  await Promise.allSettled(
+    staffEmails.map(({ email, displayName, submittedCount }) =>
+      send(
+        email,
+        `【YOMOGI】${targetYear}年${targetMonth}月分の希望休申請をお願いします`,
+        html(`
+<h2 style="color:#7c3aed;">希望休の申請をお願いします</h2>
+<p>${displayName} さん、</p>
+<p><strong>${facilityName}</strong> では ${targetYear}年${targetMonth}月分の希望休申請を今月<strong>${deadlineDay}日</strong>までに提出いただく必要があります。</p>
+<table style="border-collapse:collapse;margin-top:12px;">
+  <tr><td style="padding:4px 16px 4px 0;color:#6b7280;">提出済み</td><td style="padding:4px 0;font-weight:600;">${submittedCount}日</td></tr>
+  <tr><td style="padding:4px 16px 4px 0;color:#6b7280;">必要数</td><td style="padding:4px 0;font-weight:600;">${minWishes}日以上</td></tr>
+  <tr><td style="padding:4px 16px 4px 0;color:#6b7280;">残り</td><td style="padding:4px 0;font-weight:600;color:#dc2626;">${minWishes - submittedCount}日</td></tr>
+</table>
+<p style="margin-top:12px;">以下のリンクから希望休を申請してください。</p>
+<a href="${APP_URL}/staff/requests" style="display:inline-block;background:#7c3aed;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;margin-top:8px;">希望休を申請する</a>
+`),
+      )
+    )
+  )
+}
+
 /** 休暇申請却下通知 */
 export async function sendLeaveRejectedEmail(
   email: string,

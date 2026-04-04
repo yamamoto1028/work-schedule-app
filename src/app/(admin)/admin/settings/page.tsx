@@ -5,6 +5,7 @@ import LeaveTypesSettings from '@/components/settings/leave-types-settings'
 import ResponsibleRolesSettings from '@/components/settings/responsible-roles-settings'
 import FacilitySettings from '@/components/settings/facility-settings'
 import ConstraintSettings from '@/components/settings/constraint-settings'
+import ReminderSettings from '@/components/settings/reminder-settings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -36,12 +37,13 @@ export default async function SettingsPage() {
       </div>
 
       <Tabs defaultValue="shift-types">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-2xl">
           <TabsTrigger value="facility">施設情報</TabsTrigger>
           <TabsTrigger value="shift-types">勤務区分</TabsTrigger>
           <TabsTrigger value="leave-types">休暇区分</TabsTrigger>
           <TabsTrigger value="responsible-roles">責任者区分</TabsTrigger>
           <TabsTrigger value="constraints">制約設定</TabsTrigger>
+          <TabsTrigger value="reminder">督促通知</TabsTrigger>
         </TabsList>
 
         <TabsContent value="facility" className="mt-6" keepMounted>
@@ -75,6 +77,16 @@ export default async function SettingsPage() {
             constraints={constraintResult.data ?? []}
             responsibleRoles={responsibleRolesResult.data ?? []}
             shiftTypes={shiftTypesResult.data ?? []}
+          />
+        </TabsContent>
+
+        <TabsContent value="reminder" className="mt-6" keepMounted>
+          <ReminderSettings
+            facilityId={facilityId}
+            initialEnabled={facilityResult.data?.reminder_enabled ?? false}
+            initialHourJst={facilityResult.data?.reminder_hour_jst ?? 10}
+            initialDeadlineDay={facilityResult.data?.leave_deadline_day ?? null}
+            initialMinWishes={facilityResult.data?.leave_min_wishes ?? 2}
           />
         </TabsContent>
       </Tabs>
