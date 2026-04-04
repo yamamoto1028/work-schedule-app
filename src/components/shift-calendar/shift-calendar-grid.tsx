@@ -143,6 +143,20 @@ export default function ShiftCalendarGrid({
     monthlyCount.set(s.user_id, (monthlyCount.get(s.user_id) ?? 0) + 1)
   }
 
+  // 日付ごとの日中帯・夜間帯人数（明けは夜間帯カウントから除外）
+  const dayZoneCount = new Map<string, number>()
+  const nightZoneCount = new Map<string, number>()
+  for (const s of shifts) {
+    const st = shiftTypes.find(t => t.id === s.shift_type_id)
+    if (!st) continue
+    const isAke = st.short_name.includes('明') || st.name.includes('明け')
+    if (st.time_zone === 'day') {
+      dayZoneCount.set(s.date, (dayZoneCount.get(s.date) ?? 0) + 1)
+    } else if (!isAke) {
+      nightZoneCount.set(s.date, (nightZoneCount.get(s.date) ?? 0) + 1)
+    }
+  }
+
   const overlayShiftType = activeData
     ? shiftTypes.find(t => t.id === activeData.shiftTypeId)
     : null
@@ -246,6 +260,34 @@ export default function ShiftCalendarGrid({
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="bg-amber-50 border-t-2 border-amber-200">
+              <td className="sticky left-0 z-10 bg-amber-50 border-r border-gray-200 px-2 py-1 text-[11px] font-bold text-amber-700">
+                日中帯人数
+              </td>
+              {dates.map(date => (
+                <td key={date} className="border-r border-gray-200 p-0 w-11 text-center">
+                  <span className="text-[11px] font-semibold text-amber-700">
+                    {dayZoneCount.get(date) ?? 0}
+                  </span>
+                </td>
+              ))}
+              <td className="sticky right-0 z-10 bg-amber-50 border-l border-gray-200" />
+            </tr>
+            <tr className="bg-indigo-50 border-t border-indigo-200">
+              <td className="sticky left-0 z-10 bg-indigo-50 border-r border-gray-200 px-2 py-1 text-[11px] font-bold text-indigo-700">
+                夜間帯人数
+              </td>
+              {dates.map(date => (
+                <td key={date} className="border-r border-gray-200 p-0 w-11 text-center">
+                  <span className="text-[11px] font-semibold text-indigo-700">
+                    {nightZoneCount.get(date) ?? 0}
+                  </span>
+                </td>
+              ))}
+              <td className="sticky right-0 z-10 bg-indigo-50 border-l border-gray-200" />
+            </tr>
+          </tfoot>
         </table>
       </div>
 

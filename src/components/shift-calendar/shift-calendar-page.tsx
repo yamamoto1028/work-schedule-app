@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { checkConstraints, ShiftEntry, ConstraintViolation } from '@/lib/constraints/checker'
 import ShiftCalendarGrid from './shift-calendar-grid'
@@ -8,7 +9,7 @@ import ShiftListView from './shift-list-view'
 import YomogiPanel from '@/components/yomogi/yomogi-panel'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2, FileDown } from 'lucide-react'
 import type { GeneratedShift, DissatisfactionScore, AIFixedShiftInput } from '@/lib/ai/yomogi'
 
 type StaffMember = {
@@ -61,52 +62,53 @@ export default function ShiftCalendarPage({
 }: Props) {
   const [year, setYear] = useState(initialYear)
   const [month, setMonth] = useState(initialMonth)
-  const [shifts, setShifts] = useState<ShiftRow[]>([])
   const [violations, setViolations] = useState<ConstraintViolation[]>([])
-  const [constraints, setConstraints] = useState<{ constraint_key: string; is_enabled: boolean; value: Record<string, unknown> }[]>([])
-  const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
   const [unpublishing, setUnpublishing] = useState(false)
   const [dissatisfactionScores, setDissatisfactionScores] = useState<Map<string, number>>(new Map())
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+
   const supabase = createClient()
 
-  const fetchShifts = useCallback(async () => {
-    setLoading(true)
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const lastDay = new Date(year, month, 0).getDate()
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  const monthStr = `${year}-${String(month).padStart(2, '0')}`
+  const startDate = `${monthStr}-01`
+  const endDate = `${monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
-    const { data } = await supabase
-      .from('shifts')
-      .select('id, user_id, shift_type_id, date, status')
-      .eq('facility_id', facilityId)
-      .gte('date', startDate)
-      .lte('date', endDate)
+  // SWR: シフトデータ（月移動時にキャッシュヒットで即時表示）
+  const { data: shiftsData, isLoading, mutate: mutateShifts } = useSWR(
+    ['shifts', facilityId, monthStr],
+    async () => {
+      const { data } = await supabase
+        .from('shifts')
+        .select('id, user_id, shift_type_id, date, status')
+        .eq('facility_id', facilityId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+      return (data ?? []) as ShiftRow[]
+    },
+    { revalidateOnFocus: false }
+  )
+  const shifts = useMemo(() => shiftsData ?? [], [shiftsData])
 
-    setShifts(data ?? [])
-    setLoading(false)
-  }, [facilityId, year, month, supabase])
-
-  const fetchConstraints = useCallback(async () => {
-    const { data } = await supabase
-      .from('constraint_settings')
-      .select('constraint_key, is_enabled, value')
-      .eq('facility_id', facilityId)
-
-    setConstraints(
-      (data ?? []).map(c => ({
+  // SWR: 制約設定（施設単位で変わらないので長めにキャッシュ）
+  const { data: constraintsData } = useSWR(
+    ['constraints', facilityId],
+    async () => {
+      const { data } = await supabase
+        .from('constraint_settings')
+        .select('constraint_key, is_enabled, value')
+        .eq('facility_id', facilityId)
+      return (data ?? []).map(c => ({
         constraint_key: c.constraint_key,
         is_enabled: c.is_enabled,
         value: (c.value as Record<string, number>) ?? {},
       }))
-    )
-  }, [facilityId, supabase])
+    },
+    { revalidateOnFocus: false, dedupingInterval: 60000 }
+  )
+  const constraints = useMemo(() => constraintsData ?? [], [constraintsData])
 
-  useEffect(() => {
-    void fetchShifts()
-    void fetchConstraints()
-  }, [fetchShifts, fetchConstraints])
+  const loading = isLoading
 
   // 制約チェック（シフト変更時に再計算）
   useEffect(() => {
@@ -159,7 +161,7 @@ export default function ShiftCalendarPage({
       // 削除
       if (!existing) return
       await supabase.from('shifts').delete().eq('id', existing.id)
-      setShifts(prev => prev.filter(s => s.id !== existing.id))
+      await mutateShifts(prev => (prev ?? []).filter(s => s.id !== existing.id), false)
       return
     }
 
@@ -171,7 +173,7 @@ export default function ShiftCalendarPage({
         .eq('id', existing.id)
         .select('id, user_id, shift_type_id, date, status')
         .single()
-      if (data) setShifts(prev => prev.map(s => s.id === data.id ? data : s))
+      if (data) await mutateShifts(prev => (prev ?? []).map(s => s.id === data.id ? data : s), false)
     } else {
       // 新規
       const { data } = await supabase
@@ -179,7 +181,7 @@ export default function ShiftCalendarPage({
         .insert({ facility_id: facilityId, user_id: userId, shift_type_id: shiftTypeId, date, status: 'draft' })
         .select('id, user_id, shift_type_id, date, status')
         .single()
-      if (data) setShifts(prev => [...prev, data])
+      if (data) await mutateShifts(prev => [...(prev ?? []), data], false)
     }
   }
 
@@ -194,17 +196,17 @@ export default function ShiftCalendarPage({
         supabase.from('shifts').update({ shift_type_id: toShift.shift_type_id }).eq('id', fromShift.id),
         supabase.from('shifts').update({ shift_type_id: fromShift.shift_type_id }).eq('id', toShift.id),
       ])
-      setShifts(prev => prev.map(s => {
+      await mutateShifts(prev => (prev ?? []).map(s => {
         if (s.id === fromShift.id) return { ...s, shift_type_id: toShift.shift_type_id }
         if (s.id === toShift.id) return { ...s, shift_type_id: fromShift.shift_type_id }
         return s
-      }))
+      }), false)
     } else {
       // 空セルへ移動（ユーザー・日付を更新）
       await supabase.from('shifts').update({ user_id: toUserId, date: toDate }).eq('id', fromShift.id)
-      setShifts(prev => prev.map(s =>
+      await mutateShifts(prev => (prev ?? []).map(s =>
         s.id === fromShift.id ? { ...s, user_id: toUserId, date: toDate } : s
-      ))
+      ), false)
     }
   }
 
@@ -229,7 +231,7 @@ export default function ShiftCalendarPage({
       body: JSON.stringify({ type: 'shift_published', facilityId, year, month }),
     }).catch(() => null)
 
-    await fetchShifts()
+    await mutateShifts()
     setPublishing(false)
   }
 
@@ -247,13 +249,46 @@ export default function ShiftCalendarPage({
       .gte('date', startDate)
       .lte('date', endDate)
 
-    await fetchShifts()
+    await mutateShifts()
     setUnpublishing(false)
   }
 
-  const handleClearAll = () => {
-    if (!window.confirm(`${year}年${month}月の下書きシフトをすべて白紙に戻します。よろしいですか？\n※DBへの反映は「シフトを公開」ボタンで行われます。`)) return
-    setShifts([])
+  const [exporting, setExporting] = useState(false)
+
+  const handleExport = async () => {
+    if (hasDraft && !hasPublished) {
+      if (!window.confirm('現在のシフトは下書き状態です。下書きの内容でExcelを出力しますか？')) return
+    }
+    setExporting(true)
+    const monthStr = `${year}-${String(month).padStart(2, '0')}`
+    const res = await fetch(`/api/shifts/export?month=${monthStr}&facilityId=${facilityId}`)
+    if (res.ok) {
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const match = disposition.match(/filename\*=UTF-8''(.+)/)
+      a.download = match ? decodeURIComponent(match[1]) : `YOMOGI_${monthStr}_シフト表.xlsx`
+      a.href = url
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+    setExporting(false)
+  }
+
+  const handleClearAll = async () => {
+    if (!window.confirm(`${year}年${month}月の下書きシフトをすべて白紙に戻します。よろしいですか？`)) return
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    await supabase
+      .from('shifts')
+      .delete()
+      .eq('facility_id', facilityId)
+      .eq('status', 'draft')
+      .gte('date', startDate)
+      .lte('date', endDate)
+    await mutateShifts(prev => (prev ?? []).filter(s => s.status !== 'draft'), false)
   }
 
   const handleApplyAIShifts = async (generatedShifts: GeneratedShift[]) => {
@@ -268,7 +303,7 @@ export default function ShiftCalendarPage({
         .insert({ facility_id: facilityId, user_id: gs.user_id, shift_type_id: gs.shift_type_id, date: gs.date, status: 'draft' })
         .select('id, user_id, shift_type_id, date, status')
         .single()
-      if (data) setShifts(prev => [...prev, data])
+      if (data) await mutateShifts(prev => [...(prev ?? []), data], false)
     }
   }
 
@@ -367,6 +402,17 @@ export default function ShiftCalendarPage({
               制約OK
             </Badge>
           )}
+
+          {/* Excel出力ボタン */}
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting}
+            className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            Excel出力
+          </Button>
 
           {/* 白紙に戻すボタン */}
           {hasDraft && !hasPublished && (
