@@ -6,6 +6,9 @@ import ResponsibleRolesSettings from '@/components/settings/responsible-roles-se
 import FacilitySettings from '@/components/settings/facility-settings'
 import ConstraintSettings from '@/components/settings/constraint-settings'
 import ReminderSettings from '@/components/settings/reminder-settings'
+import BlocksSettings from '@/components/settings/blocks-settings'
+import PlanGate from '@/components/plan-gate'
+import { Badge } from '@/components/ui/badge'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -21,29 +24,46 @@ export default async function SettingsPage() {
   if (!userData?.facility_id) return null
   const facilityId = userData.facility_id
 
-  const [facilityResult, shiftTypesResult, leaveTypesResult, responsibleRolesResult, constraintResult] = await Promise.all([
+  const [facilityResult, shiftTypesResult, leaveTypesResult, responsibleRolesResult, constraintResult, floorsResult, blocksResult] = await Promise.all([
     supabase.from('facilities').select('*').eq('id', facilityId).single(),
     supabase.from('shift_types').select('*').eq('facility_id', facilityId).order('sort_order'),
     supabase.from('leave_types').select('*').eq('facility_id', facilityId).order('sort_order'),
     supabase.from('responsible_roles').select('*').eq('facility_id', facilityId),
     supabase.from('constraint_settings').select('*').eq('facility_id', facilityId),
+    supabase.from('floors').select('*').eq('facility_id', facilityId).order('sort_order'),
+    supabase.from('blocks').select('*').eq('facility_id', facilityId).order('sort_order'),
   ])
+
+  const plan = (facilityResult.data?.plan ?? 'free') as 'free' | 'pro' | 'enterprise'
+  const isEnterprise = plan === 'enterprise'
+  const isPro = plan === 'pro' || plan === 'enterprise'
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">施設設定</h1>
-        <p className="text-gray-500 mt-1">勤務区分・休暇区分・制約ルール等を設定します</p>
+      <div className="flex items-center gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">施設設定</h1>
+          <p className="text-gray-500 mt-1">勤務区分・休暇区分・制約ルール等を設定します</p>
+        </div>
+        {isPro && (
+          <Badge className={`text-white text-xs px-2 py-0.5 shrink-0 ${isEnterprise ? 'bg-violet-600' : 'bg-emerald-600'}`}>
+            {isEnterprise ? 'Enterprise' : 'Pro'}
+          </Badge>
+        )}
       </div>
 
       <Tabs defaultValue="shift-types">
-        <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-3 sm:grid-cols-7 w-full max-w-3xl">
           <TabsTrigger value="facility">施設情報</TabsTrigger>
           <TabsTrigger value="shift-types">勤務区分</TabsTrigger>
           <TabsTrigger value="leave-types">休暇区分</TabsTrigger>
           <TabsTrigger value="responsible-roles">責任者区分</TabsTrigger>
           <TabsTrigger value="constraints">制約設定</TabsTrigger>
           <TabsTrigger value="reminder">督促通知</TabsTrigger>
+          <TabsTrigger value="blocks" className="flex items-center gap-1">
+            ブロック
+            {!isEnterprise && <span className="text-[9px] bg-violet-100 text-violet-700 rounded px-1">Ent</span>}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="facility" className="mt-6" keepMounted>
@@ -88,6 +108,18 @@ export default async function SettingsPage() {
             initialDeadlineDay={facilityResult.data?.leave_deadline_day ?? null}
             initialMinWishes={facilityResult.data?.leave_min_wishes ?? 2}
           />
+        </TabsContent>
+
+        <TabsContent value="blocks" className="mt-6" keepMounted>
+          {isEnterprise ? (
+            <BlocksSettings
+              facilityId={facilityId}
+              floors={floorsResult.data ?? []}
+              blocks={blocksResult.data ?? []}
+            />
+          ) : (
+            <PlanGate currentPlan={plan} requiredPlan="enterprise" feature="フロア / ブロック管理" />
+          )}
         </TabsContent>
       </Tabs>
     </div>

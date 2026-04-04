@@ -9,6 +9,60 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      floors: {
+        Row: {
+          id: string
+          facility_id: string
+          name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          facility_id: string
+          name: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          facility_id?: string
+          name?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      blocks: {
+        Row: {
+          id: string
+          facility_id: string
+          floor_id: string | null
+          name: string
+          color: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          facility_id: string
+          floor_id?: string | null
+          name: string
+          color?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          facility_id?: string
+          floor_id?: string | null
+          name?: string
+          color?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       facilities: {
         Row: {
           id: string
@@ -20,6 +74,7 @@ export type Database = {
           reminder_hour_jst: number
           leave_deadline_day: number | null
           leave_min_wishes: number
+          plan: 'free' | 'pro' | 'enterprise'
         }
         Insert: {
           id?: string
@@ -31,6 +86,7 @@ export type Database = {
           reminder_hour_jst?: number
           leave_deadline_day?: number | null
           leave_min_wishes?: number
+          plan?: 'free' | 'pro' | 'enterprise'
         }
         Update: {
           id?: string
@@ -42,6 +98,7 @@ export type Database = {
           reminder_hour_jst?: number
           leave_deadline_day?: number | null
           leave_min_wishes?: number
+          plan?: 'free' | 'pro' | 'enterprise'
         }
         Relationships: []
       }
@@ -101,6 +158,7 @@ export type Database = {
           staff_grade: 'full' | 'half' | 'new'
           fixed_night_count: number | null
           allowed_shift_type_ids: string[]
+          block_id: string | null
           updated_at: string
         }
         Insert: {
@@ -117,6 +175,7 @@ export type Database = {
           staff_grade?: 'full' | 'half' | 'new'
           fixed_night_count?: number | null
           allowed_shift_type_ids?: string[]
+          block_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -133,6 +192,7 @@ export type Database = {
           staff_grade?: 'full' | 'half' | 'new'
           fixed_night_count?: number | null
           allowed_shift_type_ids?: string[]
+          block_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -286,6 +346,7 @@ export type Database = {
           shift_type_id: string
           date: string
           status: 'draft' | 'published' | 'confirmed'
+          block_id: string | null
           note: string | null
           created_by: string | null
           created_at: string
@@ -298,6 +359,7 @@ export type Database = {
           shift_type_id: string
           date: string
           status?: 'draft' | 'published' | 'confirmed'
+          block_id?: string | null
           note?: string | null
           created_by?: string | null
           created_at?: string
@@ -310,6 +372,7 @@ export type Database = {
           shift_type_id?: string
           date?: string
           status?: 'draft' | 'published' | 'confirmed'
+          block_id?: string | null
           note?: string | null
           created_by?: string | null
           created_at?: string

@@ -7,9 +7,10 @@ import { checkConstraints, ShiftEntry, ConstraintViolation } from '@/lib/constra
 import ShiftCalendarGrid from './shift-calendar-grid'
 import ShiftListView from './shift-list-view'
 import YomogiPanel from '@/components/yomogi/yomogi-panel'
+import PlanGate from '@/components/plan-gate'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2, FileDown, BellRing } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2, FileDown, BellRing, Building2 } from 'lucide-react'
 import type { GeneratedShift, DissatisfactionScore, AIFixedShiftInput } from '@/lib/ai/yomogi'
 
 type StaffMember = {
@@ -21,9 +22,13 @@ type StaffMember = {
     can_night_shift: boolean
     staff_grade: 'full' | 'half' | 'new'
     allowed_shift_type_ids: string[]
+    block_id: string | null
     responsible_roles: { name: string; color: string } | null
   } | null
 }
+
+type Floor = { id: string; name: string; sort_order: number }
+type Block = { id: string; floor_id: string | null; name: string; color: string; sort_order: number }
 
 type ShiftType = {
   id: string
@@ -50,6 +55,9 @@ type Props = {
   staff: StaffMember[]
   shiftTypes: ShiftType[]
   facilityType: 'hospital' | 'care_facility'
+  plan?: 'free' | 'pro' | 'enterprise'
+  floors?: Floor[]
+  blocks?: Block[]
 }
 
 export default function ShiftCalendarPage({
@@ -59,9 +67,17 @@ export default function ShiftCalendarPage({
   staff,
   shiftTypes,
   facilityType,
+  plan = 'free',
+  floors = [],
+  blocks = [],
 }: Props) {
+  const isPro = plan === 'pro' || plan === 'enterprise'
+  const isEnterprise = plan === 'enterprise'
   const [year, setYear] = useState(initialYear)
   const [month, setMonth] = useState(initialMonth)
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(
+    isEnterprise && blocks.length > 0 ? blocks[0].id : null
+  )
   const [violations, setViolations] = useState<ConstraintViolation[]>([])
   const [publishing, setPublishing] = useState(false)
   const [unpublishing, setUnpublishing] = useState(false)
@@ -75,16 +91,27 @@ export default function ShiftCalendarPage({
   const startDate = `${monthStr}-01`
   const endDate = `${monthStr}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
-  // SWR: シフトデータ（月移動時にキャッシュヒットで即時表示）
+  // Enterprise: ブロック別にスタッフを絞り込む
+  const visibleStaff = useMemo(() =>
+    isEnterprise && selectedBlockId
+      ? staff.filter(s => s.staff_profiles?.block_id === selectedBlockId)
+      : staff,
+  [staff, isEnterprise, selectedBlockId])
+
+  // SWR: シフトデータ（月 + ブロック単位でキャッシュ）
   const { data: shiftsData, isLoading, mutate: mutateShifts } = useSWR(
-    ['shifts', facilityId, monthStr],
+    ['shifts', facilityId, monthStr, selectedBlockId ?? 'all'],
     async () => {
-      const { data } = await supabase
+      let q = supabase
         .from('shifts')
         .select('id, user_id, shift_type_id, date, status')
         .eq('facility_id', facilityId)
         .gte('date', startDate)
         .lte('date', endDate)
+      if (isEnterprise && selectedBlockId) {
+        q = q.eq('block_id', selectedBlockId)
+      }
+      const { data } = await q
       return (data ?? []) as ShiftRow[]
     },
     { revalidateOnFocus: false }
@@ -119,11 +146,11 @@ export default function ShiftCalendarPage({
     }
 
     const staffRoleMap = new Map(
-      staff.map(m => [m.id, m.staff_profiles?.responsible_roles?.name ?? null])
+      visibleStaff.map(m => [m.id, m.staff_profiles?.responsible_roles?.name ?? null])
     )
 
     const staffAllowedMap = new Map(
-      staff.map(m => [m.id, m.staff_profiles?.allowed_shift_type_ids ?? []])
+      visibleStaff.map(m => [m.id, m.staff_profiles?.allowed_shift_type_ids ?? []])
     )
 
     const entries: ShiftEntry[] = shifts.map(s => {
@@ -179,7 +206,14 @@ export default function ShiftCalendarPage({
       // 新規
       const { data } = await supabase
         .from('shifts')
-        .insert({ facility_id: facilityId, user_id: userId, shift_type_id: shiftTypeId, date, status: 'draft' })
+        .insert({
+          facility_id: facilityId,
+          user_id: userId,
+          shift_type_id: shiftTypeId,
+          date,
+          status: 'draft',
+          ...(isEnterprise && selectedBlockId ? { block_id: selectedBlockId } : {}),
+        })
         .select('id, user_id, shift_type_id, date, status')
         .single()
       if (data) await mutateShifts(prev => [...(prev ?? []), data], false)
@@ -324,7 +358,8 @@ export default function ShiftCalendarPage({
   const hasPublished = shifts.some(s => s.status === 'published')
   const unconfirmedCount = new Set(shifts.filter(s => s.status === 'published').map(s => s.user_id)).size
 
-  const aiStaff = staff.map(s => ({
+  // Enterprise: ブロック内スタッフのみ AI に渡す
+  const aiStaff = visibleStaff.map(s => ({
     id: s.id,
     display_name: s.display_name,
     can_night_shift: s.staff_profiles?.can_night_shift ?? false,
@@ -343,7 +378,7 @@ export default function ShiftCalendarPage({
 
   const aiFixedShifts: AIFixedShiftInput[] = shifts.map(s => {
     const st = shiftTypes.find(t => t.id === s.shift_type_id)
-    const member = staff.find(m => m.id === s.user_id)
+    const member = visibleStaff.find(m => m.id === s.user_id)
     return {
       user_id: s.user_id,
       display_name: member?.display_name ?? s.user_id,
@@ -357,8 +392,8 @@ export default function ShiftCalendarPage({
     <div className="flex flex-col gap-4">
       {/* ヘッダー */}
       <div className="flex flex-col min-[1120px]:flex-row min-[1120px]:items-center min-[1120px]:justify-between gap-3">
-        {/* 左: タイトル + 月ナビ */}
-        <div className="flex items-center gap-3">
+        {/* 左: タイトル + 月ナビ + ブロックセレクター（Enterprise） */}
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl min-[1120px]:text-2xl font-bold text-gray-900 shrink-0">シフト管理</h1>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={goToPrevMonth} className="h-8 w-8">
@@ -371,6 +406,48 @@ export default function ShiftCalendarPage({
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* ブロックセレクター（Enterprise のみ） */}
+          {isEnterprise && blocks.length > 0 && (() => {
+            // フロアでグループ化して表示
+            const unassigned = blocks.filter(b => !b.floor_id)
+            const floorGroups = floors.map(f => ({
+              floor: f,
+              blocks: blocks.filter(b => b.floor_id === f.id),
+            })).filter(g => g.blocks.length > 0)
+            const allGroups = [
+              ...floorGroups,
+              ...(unassigned.length > 0 ? [{ floor: null, blocks: unassigned }] : []),
+            ]
+            return (
+              <div className="flex flex-wrap items-center gap-1 border rounded-lg p-1 bg-gray-50">
+                <Building2 className="h-3.5 w-3.5 text-violet-500 ml-1 shrink-0" />
+                {allGroups.map(({ floor, blocks: gb }) => (
+                  <span key={floor?.id ?? 'none'} className="flex items-center gap-1">
+                    {floor && (
+                      <span className="text-[10px] text-gray-400 px-1 border-l first:border-l-0">
+                        {floor.name}
+                      </span>
+                    )}
+                    {gb.map(b => (
+                      <button
+                        key={b.id}
+                        onClick={() => setSelectedBlockId(b.id)}
+                        className={`h-7 px-2.5 rounded text-xs font-medium transition-colors ${
+                          selectedBlockId === b.id
+                            ? 'text-white shadow-sm'
+                            : 'text-gray-600 hover:bg-gray-200'
+                        }`}
+                        style={selectedBlockId === b.id ? { background: b.color } : {}}
+                      >
+                        {b.name}
+                      </button>
+                    ))}
+                  </span>
+                ))}
+              </div>
+            )
+          })()}
         </div>
 
         {/* 右: 操作エリア（モバイルは flex-wrap で折り返し） */}
@@ -480,23 +557,27 @@ export default function ShiftCalendarPage({
         </div>
       </div>
 
-      {/* ヨモギ主任パネル */}
-      <YomogiPanel
-        facilityId={facilityId}
-        facilityType={facilityType}
-        year={year}
-        month={month}
-        staff={aiStaff}
-        shiftTypes={aiShiftTypes}
-        constraints={constraints}
-        fixedShifts={aiFixedShifts}
-        onApplyShifts={handleApplyAIShifts}
-        onScoresUpdate={(scores: DissatisfactionScore[]) => {
-          const map = new Map<string, number>()
-          scores.forEach(s => map.set(s.user_id, s.score))
-          setDissatisfactionScores(map)
-        }}
-      />
+      {/* ヨモギ主任パネル（Pro以上） */}
+      {isPro ? (
+        <YomogiPanel
+          facilityId={facilityId}
+          facilityType={facilityType}
+          year={year}
+          month={month}
+          staff={aiStaff}
+          shiftTypes={aiShiftTypes}
+          constraints={constraints}
+          fixedShifts={aiFixedShifts}
+          onApplyShifts={handleApplyAIShifts}
+          onScoresUpdate={(scores: DissatisfactionScore[]) => {
+            const map = new Map<string, number>()
+            scores.forEach(s => map.set(s.user_id, s.score))
+            setDissatisfactionScores(map)
+          }}
+        />
+      ) : (
+        <PlanGate currentPlan={plan} requiredPlan="pro" feature="AIシフト自動生成（ヨモギ主任）" />
+      )}
 
       {/* カレンダー / 一覧表示 */}
       {loading ? (
@@ -507,7 +588,7 @@ export default function ShiftCalendarPage({
         <ShiftCalendarGrid
           year={year}
           month={month}
-          staff={staff}
+          staff={visibleStaff}
           shiftTypes={shiftTypes}
           shifts={shifts}
           violations={violations}
@@ -519,7 +600,7 @@ export default function ShiftCalendarPage({
         <ShiftListView
           year={year}
           month={month}
-          staff={staff}
+          staff={visibleStaff}
           shiftTypes={shiftTypes}
           shifts={shifts}
         />
