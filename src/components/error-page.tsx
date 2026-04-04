@@ -15,7 +15,7 @@ export default function ErrorPage({ error, reset }: Props) {
   }, [error])
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] gap-6 text-center">
+    <div className="flex flex-col items-center justify-center min-h-100 gap-6 text-center">
       <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
         <AlertTriangle className="h-8 w-8 text-red-500" />
       </div>

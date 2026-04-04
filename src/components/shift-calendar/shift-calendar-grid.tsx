@@ -167,7 +167,7 @@ export default function ShiftCalendarGrid({
         <table className="border-collapse text-xs" style={{ minWidth: `${dates.length * 44 + 180}px` }}>
           <thead>
             <tr className="bg-gray-50 sticky top-0 z-10">
-              <th className="sticky left-0 z-20 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-600 min-w-[160px]">
+              <th className="sticky left-0 z-20 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-600 min-w-40">
                 スタッフ
               </th>
               {dates.map(date => {
@@ -181,14 +181,14 @@ export default function ShiftCalendarGrid({
                 return (
                   <th
                     key={date}
-                    className={`border-b border-r border-gray-200 px-0 py-1 text-center font-medium w-11 min-w-[44px] ${isToday ? 'bg-emerald-50' : ''}`}
+                    className={`border-b border-r border-gray-200 px-0 py-1 text-center font-medium w-11 min-w-11 ${isToday ? 'bg-emerald-50' : ''}`}
                   >
                     <div className={`text-[11px] ${isRed ? 'text-red-500' : WEEKDAY_COLOR[weekday]}`}>{WEEKDAY_LABELS[weekday]}</div>
                     <div className={`text-[13px] font-bold ${colorClass}`}>{day}</div>
                   </th>
                 )
               })}
-              <th className="sticky right-0 z-20 bg-gray-50 border-b border-l border-gray-200 px-2 py-2 text-center font-medium text-gray-600 min-w-[48px]">
+              <th className="sticky right-0 z-20 bg-gray-50 border-b border-l border-gray-200 px-2 py-2 text-center font-medium text-gray-600 min-w-12">
                 月計
               </th>
             </tr>
@@ -196,7 +196,7 @@ export default function ShiftCalendarGrid({
           <tbody>
             {staff.map((member, rowIdx) => (
               <tr key={member.id} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                <td className="sticky left-0 z-10 border-b border-r border-gray-200 px-2 py-1 min-w-[160px] bg-inherit">
+                <td className="sticky left-0 z-10 border-b border-r border-gray-200 px-2 py-1 min-w-40 bg-inherit">
                   <div className="flex items-center gap-1.5">
                     {(() => {
                       const score = dissatisfactionScores?.get(member.id)
@@ -217,7 +217,7 @@ export default function ShiftCalendarGrid({
                         {member.staff_profiles.responsible_roles.name}
                       </span>
                     )}
-                    <span className="font-medium text-gray-800 truncate max-w-[100px]">{member.display_name}</span>
+                    <span className="font-medium text-gray-800 truncate max-w-25">{member.display_name}</span>
                   </div>
                   {member.staff_profiles?.position && (
                     <div className="text-[10px] text-gray-400 pl-1">{member.staff_profiles.position}</div>
@@ -235,7 +235,7 @@ export default function ShiftCalendarGrid({
                   return (
                     <td
                       key={date}
-                      className={`border-b border-r border-gray-200 p-0 w-11 min-w-[44px] ${isToday ? 'bg-emerald-50/30' : ''}`}
+                      className={`border-b border-r border-gray-200 p-0 w-11 min-w-11 ${isToday ? 'bg-emerald-50/30' : ''}`}
                     >
                       <DroppableCell id={droppableId}>
                         <ShiftCell

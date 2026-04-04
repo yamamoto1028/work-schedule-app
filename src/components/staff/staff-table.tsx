@@ -102,14 +102,14 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50">
-            <TableHead className="w-[200px]">氏名</TableHead>
+            <TableHead className="w-50">氏名</TableHead>
             <TableHead>メールアドレス</TableHead>
             <TableHead>役職・責任者区分</TableHead>
             <TableHead>雇用形態</TableHead>
             <TableHead>職員区分</TableHead>
             <TableHead>夜勤</TableHead>
             <TableHead>ステータス</TableHead>
-            <TableHead className="w-[60px]"></TableHead>
+            <TableHead className="w-15"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

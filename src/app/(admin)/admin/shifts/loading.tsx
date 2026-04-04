@@ -11,7 +11,7 @@ export default function ShiftsLoading() {
         </div>
       </div>
       <Skeleton className="h-32 rounded-xl" />
-      <Skeleton className="h-[480px] rounded-xl" />
+      <Skeleton className="h-120 rounded-xl" />
     </div>
   )
 }
