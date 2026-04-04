@@ -77,13 +77,15 @@
 
 | レイヤー       | 技術                                   | 備考                         |
 | -------------- | -------------------------------------- | ---------------------------- |
-| フロントエンド | Next.js 14（App Router）               | Vercel デプロイ              |
-| スタイリング   | Tailwind CSS + shadcn/ui               |                              |
-| シフト表 UI    | react-big-calendar + dnd-kit           | D&D による直接編集           |
+| フロントエンド | Next.js **16**（App Router）           | Vercel デプロイ              |
+| スタイリング   | Tailwind CSS **v4** + shadcn/ui        | base-ui ベース（`asChild` 非対応）|
+| シフト表 UI    | dnd-kit（カスタムカレンダーグリッド）  | react-big-calendar は不使用  |
+| データ取得     | SWR                                    | クライアントキャッシュ・楽観的更新 |
 | バックエンド   | Next.js API Routes                     | サーバーレス、別サーバー不要 |
 | データベース   | Supabase（PostgreSQL）                 | Auth・Realtime も利用        |
 | AI エンジン    | Claude API（claude-sonnet-4-20250514） | ストリーミング対応           |
 | メール通知     | Resend                                 | スタッフへのシフト通知       |
+| Excel 出力     | ExcelJS                                | サーバーサイド生成のみ       |
 | デプロイ       | Vercel                                 | 自動 CI/CD                   |
 
 ### 2.2 ディレクトリ構成（推奨）
