@@ -37,14 +37,21 @@ type ShiftType = {
   short_name: string
 }
 
+type Floor = { id: string; name: string; sort_order: number }
+type Block = { id: string; floor_id: string | null; name: string; color: string; sort_order: number }
+
 type Props = {
   facilityId: string
   responsibleRoles: ResponsibleRole[]
   shiftTypes: ShiftType[]
+  plan?: 'free' | 'pro' | 'enterprise'
+  floors?: Floor[]
+  blocks?: Block[]
 }
 
-export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftTypes }: Props) {
+export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftTypes, plan = 'free', floors = [], blocks = [] }: Props) {
   const router = useRouter()
+  const isEnterprise = plan === 'enterprise'
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
@@ -58,6 +65,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
     can_night_shift: true,
     phone: '',
     allowed_shift_type_ids: [] as string[],
+    block_id: 'none',
   })
 
   const toggleShiftType = (id: string) => {
@@ -100,6 +108,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
       can_night_shift: form.can_night_shift,
       phone: form.phone || null,
       allowed_shift_type_ids: form.allowed_shift_type_ids,
+      block_id: form.block_id === 'none' ? null : form.block_id,
     })
 
     if (profileError) {
@@ -121,6 +130,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
       can_night_shift: true,
       phone: '',
       allowed_shift_type_ids: [],
+      block_id: 'none',
     })
     router.refresh()
     setLoading(false)
@@ -233,6 +243,41 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
               </Select>
             </div>
           </div>
+
+          {isEnterprise && blocks.length > 0 && (
+            <div className="space-y-2">
+              <Label>所属ブロック</Label>
+              <Select
+                value={form.block_id}
+                onValueChange={(v) => setForm({ ...form, block_id: v ?? 'none' })}
+              >
+                <SelectTrigger>
+                  <span>
+                    {form.block_id === 'none'
+                      ? '未割当'
+                      : blocks.find(b => b.id === form.block_id)?.name ?? '未割当'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">未割当</SelectItem>
+                  {floors.length > 0
+                    ? floors.map(f => {
+                        const fb = blocks.filter(b => b.floor_id === f.id)
+                        if (fb.length === 0) return null
+                        return fb.map(b => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {f.name} / {b.name}
+                          </SelectItem>
+                        ))
+                      })
+                    : blocks.map(b => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 py-2">
             <Switch
