@@ -34,8 +34,7 @@ const ENTERPRISE_FEATURES = [
 export default function PlanGate({ currentPlan, requiredPlan, feature }: Props) {
   const isPro       = requiredPlan === 'pro';
   const Icon        = isPro ? Sparkles : Building2;
-  const color       = isPro ? 'emerald' : 'violet';
-  const featureList = isPro ? PRO_FEATURES : ENTERPRISE_FEATURES;
+const featureList = isPro ? PRO_FEATURES : ENTERPRISE_FEATURES;
   const planName    = PLAN_LABEL[requiredPlan];
 
   return (
