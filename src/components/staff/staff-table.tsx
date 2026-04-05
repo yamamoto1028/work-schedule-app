@@ -34,6 +34,9 @@ type ShiftType = {
   short_name: string
 }
 
+type Floor = { id: string; name: string; sort_order: number }
+type Block = { id: string; floor_id: string | null; name: string; color: string; sort_order: number }
+
 type StaffProfile = {
   id: string
   employment_type: string | null
@@ -46,6 +49,7 @@ type StaffProfile = {
   fixed_night_count: number | null
   allowed_shift_type_ids: string[]
   skills: string[]
+  block_id: string | null
   responsible_roles: { name: string; color: string } | null
 }
 
@@ -63,6 +67,9 @@ type Props = {
   facilityId: string
   shiftTypes: ShiftType[]
   responsibleRoles: ResponsibleRole[]
+  plan?: 'free' | 'pro' | 'enterprise'
+  floors?: Floor[]
+  blocks?: Block[]
 }
 
 const gradeLabels: Record<string, string> = {
@@ -77,9 +84,10 @@ const gradeVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'o
   new: 'outline',
 }
 
-export default function StaffTable({ staff: initialStaff, facilityId, responsibleRoles, shiftTypes }: Props) {
+export default function StaffTable({ staff: initialStaff, facilityId, responsibleRoles, shiftTypes, plan = 'free', floors = [], blocks = [] }: Props) {
   const router = useRouter()
   const [editTarget, setEditTarget] = useState<StaffUser | null>(null)
+  const isEnterprise = plan === 'enterprise'
 
   const handleToggleActive = async (staffId: string, currentActive: boolean) => {
     const supabase = createClient()
@@ -105,6 +113,7 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
             <TableHead className="w-50">氏名</TableHead>
             <TableHead>メールアドレス</TableHead>
             <TableHead>役職・責任者区分</TableHead>
+            {isEnterprise && <TableHead>ブロック</TableHead>}
             <TableHead>雇用形態</TableHead>
             <TableHead>職員区分</TableHead>
             <TableHead>夜勤</TableHead>
@@ -142,6 +151,23 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
                       )}
                     </div>
                   </TableCell>
+                  {isEnterprise && (() => {
+                    const block = blocks.find(b => b.id === profile?.block_id)
+                    return (
+                      <TableCell>
+                        {block ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                            style={{ backgroundColor: block.color }}
+                          >
+                            {block.name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">未割当</span>
+                        )}
+                      </TableCell>
+                    )
+                  })()}
                   <TableCell className="text-sm text-gray-600">
                     {profile?.employment_type ?? '—'}
                   </TableCell>
@@ -201,6 +227,9 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
           facilityId={facilityId}
           responsibleRoles={responsibleRoles}
           shiftTypes={shiftTypes}
+          plan={plan}
+          floors={floors}
+          blocks={blocks}
           open={!!editTarget}
           onClose={() => setEditTarget(null)}
         />

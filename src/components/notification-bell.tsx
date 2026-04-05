@@ -54,7 +54,7 @@ export default function NotificationBell({ userId, role = 'admin' }: { userId: s
   // 同名チャンネルが subscribe 済みの状態で .on() を呼ぶとエラーになるため
   useEffect(() => {
     const supabase = createClient()
-    const channelId = `${userId}:${Date.now()}`
+    const channelId = `${userId}:${crypto.randomUUID()}`
     const channel = supabase
       .channel(`notifications:${channelId}`)
       .on(

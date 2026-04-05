@@ -17,7 +17,7 @@ export default async function StaffPage() {
   if (!userData?.facility_id) return null
   const facilityId = userData.facility_id
 
-  const [staffResult, responsibleRolesResult, shiftTypesResult] = await Promise.all([
+  const [staffResult, responsibleRolesResult, shiftTypesResult, facilityResult, floorsResult, blocksResult] = await Promise.all([
     supabase
       .from('users')
       .select(`
@@ -40,7 +40,24 @@ export default async function StaffPage() {
       .eq('facility_id', facilityId)
       .eq('is_active', true)
       .order('sort_order'),
+    supabase
+      .from('facilities')
+      .select('plan')
+      .eq('id', facilityId)
+      .single(),
+    supabase
+      .from('floors')
+      .select('id, name, sort_order')
+      .eq('facility_id', facilityId)
+      .order('sort_order'),
+    supabase
+      .from('blocks')
+      .select('id, floor_id, name, color, sort_order')
+      .eq('facility_id', facilityId)
+      .order('sort_order'),
   ])
+
+  const plan = (facilityResult.data?.plan ?? 'free') as 'free' | 'pro' | 'enterprise'
 
   return (
     <div className="space-y-6">
@@ -55,6 +72,9 @@ export default async function StaffPage() {
           facilityId={facilityId}
           responsibleRoles={responsibleRolesResult.data ?? []}
           shiftTypes={shiftTypesResult.data ?? []}
+          plan={plan}
+          floors={floorsResult.data ?? []}
+          blocks={blocksResult.data ?? []}
         />
       </div>
 
@@ -65,6 +85,9 @@ export default async function StaffPage() {
             facilityId={facilityId}
             responsibleRoles={responsibleRolesResult.data ?? []}
             shiftTypes={shiftTypesResult.data ?? []}
+            plan={plan}
+            floors={floorsResult.data ?? []}
+            blocks={blocksResult.data ?? []}
           />
         </CardContent>
       </Card>

@@ -25,8 +25,9 @@ import { Loader2 } from 'lucide-react'
 import { toggleArrayItem } from '@/lib/utils'
 
 type ResponsibleRole = { id: string; name: string; color: string }
-
 type ShiftType = { id: string; name: string; short_name: string }
+type Floor = { id: string; name: string; sort_order: number }
+type Block = { id: string; floor_id: string | null; name: string; color: string; sort_order: number }
 
 type StaffProfile = {
   id: string
@@ -40,6 +41,7 @@ type StaffProfile = {
   fixed_night_count: number | null
   allowed_shift_type_ids: string[]
   skills: string[]
+  block_id: string | null
   responsible_roles: { name: string; color: string } | null
 }
 
@@ -56,13 +58,17 @@ type Props = {
   facilityId: string
   responsibleRoles: ResponsibleRole[]
   shiftTypes: ShiftType[]
+  plan?: 'free' | 'pro' | 'enterprise'
+  floors?: Floor[]
+  blocks?: Block[]
   open: boolean
   onClose: () => void
 }
 
-export default function StaffEditDialog({ staff, facilityId, responsibleRoles, shiftTypes, open, onClose }: Props) {
+export default function StaffEditDialog({ staff, facilityId, responsibleRoles, shiftTypes, plan = 'free', floors = [], blocks = [], open, onClose }: Props) {
   const router = useRouter()
   const profile = staff.staff_profiles
+  const isEnterprise = plan === 'enterprise'
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     display_name: staff.display_name,
@@ -74,6 +80,7 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, s
     max_monthly_shifts: profile?.max_monthly_shifts?.toString() ?? '',
     phone: profile?.phone ?? '',
     allowed_shift_type_ids: profile?.allowed_shift_type_ids ?? [],
+    block_id: profile?.block_id ?? 'none',
   })
 
   const toggleShiftType = (id: string) => {
@@ -105,6 +112,7 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, s
       max_monthly_shifts: form.max_monthly_shifts ? parseInt(form.max_monthly_shifts) : null,
       phone: form.phone || null,
       allowed_shift_type_ids: form.allowed_shift_type_ids,
+      block_id: form.block_id === 'none' ? null : form.block_id,
     }
 
     if (profile) {
@@ -201,6 +209,41 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, s
               </Select>
             </div>
           </div>
+
+          {isEnterprise && blocks.length > 0 && (
+            <div className="space-y-2">
+              <Label>所属ブロック</Label>
+              <Select
+                value={form.block_id}
+                onValueChange={(v) => setForm({ ...form, block_id: v ?? 'none' })}
+              >
+                <SelectTrigger>
+                  <span>
+                    {form.block_id === 'none'
+                      ? '未割当'
+                      : blocks.find(b => b.id === form.block_id)?.name ?? '未割当'}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">未割当</SelectItem>
+                  {floors.length > 0
+                    ? floors.map(f => {
+                        const fb = blocks.filter(b => b.floor_id === f.id)
+                        if (fb.length === 0) return null
+                        return fb.map(b => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {f.name} / {b.name}
+                          </SelectItem>
+                        ))
+                      })
+                    : blocks.map(b => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>月最大勤務数（空欄=施設デフォルト）</Label>
