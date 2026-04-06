@@ -143,6 +143,8 @@ import { updateSession } from "@/lib/supabase/middleware";
 - **`src/middleware.ts` は廃止。`proxy.ts`（プロジェクトルート）を使う**
 - エクスポート関数名は `proxy`（`middleware` ではない）
 - 各 layout.tsx でロールチェックを行い、不正アクセス時は `redirect()` する
+- 未ログインでもアクセス可能なパス（`lib/supabase/middleware.ts` の `publicPaths`）:
+  `/login` / `/register` / `/auth/callback` / `/api`
 
 ### 型定義
 
@@ -188,6 +190,31 @@ import { updateSession } from "@/lib/supabase/middleware";
 - 共通エラー UI は `components/error-page.tsx` に集約。各 error.tsx はこれを re-export する
 - SWR の `isLoading` はセッション内の初回のみ `true`。2回目以降はキャッシュで即表示される
 
+### Supabase Realtime チャンネル名
+
+- `notification-bell.tsx` 等で Realtime チャンネルを作成する際は **`crypto.randomUUID()`** でユニークなチャンネル名を付与する
+- `Date.now()` は同一ミリ秒内の2回呼び出しで衝突するため使用禁止
+- 理由：React Strict Mode が `useEffect` を2回実行するため、同名チャンネルが `subscribe()` 後に `.on()` されてエラーになる
+
+### 管理者アカウントとスタッフアカウントの分離
+
+- 施設登録時に作成される管理者（`role = 'admin'`）には **`staff_profiles` を作成しない**
+- シフト表・Excel 出力・通知等のスタッフ対象処理は **`role = 'staff'` のみ**クエリする（`admin` を含めない）
+- 管理者がシフトにも入る場合は、スタッフ管理画面から別途 `role = 'staff'` アカウントを作成する
+
+### プランゲート実装
+
+- `src/components/plan-gate.tsx` を使う（`enterprise-gate.tsx` は廃止・削除済み）
+- `currentPlan: 'free' | 'pro' | 'enterprise'` と `requiredPlan: 'pro' | 'enterprise'` を受け取る
+- `plan` の型は必ず `'free' | 'pro' | 'enterprise'`。`'basic'` は廃止（migration 012で移行済み）
+- シフトカレンダーの YomogiPanel は Pro 未満では `PlanGate requiredPlan="pro"` を表示する
+- Enterprise 専用機能（フロア/ブロック管理）は `requiredPlan="enterprise"` を使う
+
+### Vercel Cron
+
+- `vercel.json` のスケジュールは **Hobby プランでは `0 9 * * *`（1日1回）に制限**
+- 毎時実行（`0 * * * *`）は Pro プラン以上が必要。誤って設定するとデプロイ自体が失敗する（Deploymentsに表示されない）
+
 ---
 
 ## よく使うコマンド
@@ -209,7 +236,7 @@ npm run lint
 
 ## DB テーブル一覧（概要）
 
-詳細な SQL 定義は `REQUIREMENTS.md 5.2` を参照。マイグレーションは `supabase/migrations/001〜008` まで適用済み。
+詳細な SQL 定義は `REQUIREMENTS.md 5.2` を参照。マイグレーションは `supabase/migrations/001〜013` まで適用済み。
 
 | テーブル名              | 概要                                                         |
 | ----------------------- | ------------------------------------------------------------ |
@@ -225,21 +252,29 @@ npm run lint
 | `constraint_settings`   | 制約設定（`constraint_key` + `is_enabled` + `value: jsonb`） |
 | `committee_assignments` | 委員会担当（会議開催日に日中帯シフト必須）                   |
 | `facility_events`       | 施設行事（入浴日・リネン交換日等）                           |
+| `floors`                | フロア（Enterprise: 施設内の階層グループ）                   |
+| `blocks`                | ブロック / ユニット（Enterprise: シフト管理の単位）          |
 
 ---
 
-## 実装状況（Week 1〜4 完了）
+## 実装状況（Week 1〜4 完了 + 追加実装）
 
 ```
 Week 1（基盤）: ✅ セットアップ / DB / Auth / スタッフ CRUD / マスタ設定画面
 Week 2（コア）: ✅ カレンダー UI / D&D / 制約チェック / 承認フロー / 通知
 Week 3（AI）  : ✅ Claude API / ヨモギ主任 UI / AI 生成 / 不満スコア / 一覧リスト表示
 Week 4（完成）: ✅ エラー処理 / ローディング UI / SWR / レスポンシブ / Excel 出力 / デモデータ / Vercel デプロイ
-```
 
-**未実装（Nice to have）**:
-- ヨモギ主任アニメーション演出
-- 確認督促通知の自動送信
+追加実装:
+  ✅ ヨモギ主任アニメーション演出（アバター ping / float / pop / shake）
+  ✅ 確認督促通知の自動送信（Vercel Cron + vercel.json）
+  ✅ 督促通知の送信可否・時刻設定 UI（ReminderSettings）
+  ✅ 希望休申請締め切り督促メール（leave_deadline_day / leave_min_wishes）
+  ✅ Enterprise プラン: フロア / ブロック構造（floors / blocks テーブル）
+  ✅ 3プラン体系（free / pro / enterprise）+ PlanGate コンポーネント
+  ✅ 施設新規登録フロー（/register + メール確認 + デフォルトマスタ自動 seed）
+  ✅ スタッフへのブロック所属割り当て UI（Enterprise のみ表示）
+```
 
 ---
 
