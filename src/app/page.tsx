@@ -13,6 +13,9 @@ import {
   Sparkles,
   Users,
   FileSpreadsheet,
+  Zap,
+  Building2,
+  Star,
 } from 'lucide-react'
 
 export default async function RootPage() {
@@ -45,6 +48,9 @@ export default async function RootPage() {
             <span className="text-lg font-bold text-gray-900">YOMOGI</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="#pricing" className="hidden sm:block text-sm text-gray-500 hover:text-gray-900 font-medium">
+              料金プラン
+            </Link>
             <Link href="/login">
               <Button variant="ghost" size="sm">ログイン</Button>
             </Link>
@@ -290,6 +296,180 @@ export default async function RootPage() {
                 <p className="text-sm text-gray-500">ボタン一つで .xlsx を即ダウンロード</p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* 料金プランセクション */}
+        <section id="pricing" className="py-20 sm:py-28 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-14">
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">シンプルな料金プラン</h2>
+              <p className="text-gray-500 max-w-xl mx-auto">
+                まずは無料で始められます。AIシフト生成など本格運用はProプランへ。
+                複数フロア・ブロックの管理にはEnterpriseをどうぞ。
+              </p>
+            </div>
+
+            {/* プランカード */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-16">
+              {/* Free */}
+              <div className="rounded-2xl border border-gray-200 p-8 flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <span className="font-semibold text-gray-700">Free</span>
+                </div>
+                <div className="mb-2">
+                  <span className="text-4xl font-extrabold text-gray-900">無料</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-6">小規模施設・お試し・個人向け</p>
+                <ul className="space-y-2.5 mb-8 flex-1">
+                  {[
+                    { label: 'スタッフ管理 CRUD', ok: true },
+                    { label: '勤務区分・休暇区分マスタ設定', ok: true },
+                    { label: '制約設定（オン/オフ・パラメータ）', ok: true },
+                    { label: 'シフト手動作成・D&D 編集', ok: true },
+                    { label: '制約チェック リアルタイム表示', ok: true },
+                    { label: 'シフト表閲覧（スタッフ側）', ok: true },
+                    { label: '希望休・休暇申請', ok: true },
+                    { label: 'Excel 出力', ok: true },
+                    { label: 'AI シフト自動生成（ヨモギ主任）', ok: false },
+                    { label: '不満スコア可視化', ok: false },
+                    { label: 'メール・Realtime 通知', ok: false },
+                    { label: '複数フロア・ブロック管理', ok: false },
+                  ].map(({ label, ok }) => (
+                    <li key={label} className={`flex items-start gap-2 text-sm ${ok ? 'text-gray-700' : 'text-gray-300'}`}>
+                      <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${ok ? 'text-gray-400' : 'text-gray-200'}`} />
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/register">
+                  <Button variant="outline" className="w-full">無料で始める</Button>
+                </Link>
+              </div>
+
+              {/* Pro（おすすめ） */}
+              <div className="rounded-2xl border-2 border-emerald-500 p-8 flex flex-col relative shadow-xl">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-emerald-600 text-white border-0 px-4 py-1 text-xs font-semibold shadow">
+                    <Star className="w-3 h-3 mr-1" />
+                    おすすめ
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <Brain className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <span className="font-semibold text-emerald-700">Pro</span>
+                </div>
+                <div className="mb-1">
+                  <span className="text-4xl font-extrabold text-gray-900">¥3,980</span>
+                  <span className="text-gray-500 text-sm ml-1">/ 月・施設</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-6">中規模施設・本格運用向け</p>
+                <ul className="space-y-2.5 mb-8 flex-1">
+                  {[
+                    { label: 'スタッフ管理 CRUD', ok: true },
+                    { label: '勤務区分・休暇区分マスタ設定', ok: true },
+                    { label: '制約設定（オン/オフ・パラメータ）', ok: true },
+                    { label: 'シフト手動作成・D&D 編集', ok: true },
+                    { label: '制約チェック リアルタイム表示', ok: true },
+                    { label: 'シフト表閲覧（スタッフ側）', ok: true },
+                    { label: '希望休・休暇申請', ok: true },
+                    { label: 'Excel 出力', ok: true },
+                    { label: 'AI シフト自動生成（ヨモギ主任）', ok: true },
+                    { label: '不満スコア可視化', ok: true },
+                    { label: 'メール・Realtime 通知', ok: true },
+                    { label: '複数フロア・ブロック管理', ok: false },
+                  ].map(({ label, ok }) => (
+                    <li key={label} className={`flex items-start gap-2 text-sm ${ok ? 'text-gray-700' : 'text-gray-300'}`}>
+                      <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${ok ? 'text-emerald-500' : 'text-gray-200'}`} />
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/register">
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                    無料で始める
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Enterprise */}
+              <div className="rounded-2xl border border-gray-200 p-8 flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <span className="font-semibold text-indigo-700">Enterprise</span>
+                </div>
+                <div className="mb-1">
+                  <span className="text-4xl font-extrabold text-gray-900">¥5,980</span>
+                  <span className="text-gray-500 text-sm ml-1">〜 / 月</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-1">大規模・複数施設展開向け</p>
+                <p className="text-xs text-emerald-600 font-medium mb-6">まとめるほどお得（最大25%OFF）</p>
+                <ul className="space-y-2.5 mb-8 flex-1">
+                  {[
+                    { label: 'Proの全機能', ok: true },
+                    { label: '複数フロア・ブロック管理', ok: true },
+                    { label: 'ブロック数に応じたボリューム割引', ok: true },
+                    { label: '請求書払い対応', ok: true },
+                    { label: '専任サポート', ok: true },
+                  ].map(({ label, ok }) => (
+                    <li key={label} className={`flex items-start gap-2 text-sm ${ok ? 'text-gray-700' : 'text-gray-300'}`}>
+                      <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${ok ? 'text-indigo-400' : 'text-gray-200'}`} />
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+                <Button variant="outline" className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                  お問い合わせ
+                </Button>
+              </div>
+            </div>
+
+            {/* Enterpriseボリューム割引テーブル */}
+            <div className="max-w-2xl mx-auto">
+              <h3 className="text-center text-sm font-semibold text-gray-700 mb-4">
+                Enterprise ボリューム割引（25% OFF）
+              </h3>
+              <div className="rounded-xl border border-gray-100 overflow-hidden text-sm">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 text-xs text-gray-500">
+                      <th className="text-left px-4 py-3 font-medium">ブロック数</th>
+                      <th className="text-right px-4 py-3 font-medium">通常積み上げ</th>
+                      <th className="text-right px-4 py-3 font-medium text-emerald-600">割引後（月額）</th>
+                      <th className="text-right px-4 py-3 font-medium">お得感</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {[
+                      { blocks: '2ブロック', base: '¥7,960', discounted: '¥5,980', note: 'Proの1.5倍' },
+                      { blocks: '3ブロック', base: '¥11,940', discounted: '¥7,980', note: 'Proの2倍' },
+                      { blocks: '5ブロック', base: '¥19,900', discounted: '¥12,800', note: 'まとめるほどお得' },
+                      { blocks: '10ブロック', base: '¥39,800', discounted: '¥24,800', note: '大型施設向け' },
+                    ].map(({ blocks, base, discounted, note }) => (
+                      <tr key={blocks} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-gray-800">{blocks}</td>
+                        <td className="px-4 py-3 text-right text-gray-400 line-through">{base}</td>
+                        <td className="px-4 py-3 text-right font-bold text-emerald-600">{discounted}</td>
+                        <td className="px-4 py-3 text-right text-xs text-gray-400">{note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 注記 */}
+            <p className="text-center text-xs text-gray-400 mt-8">
+              ※ 月払い。初月は無料トライアルとしてご利用いただけます。消費税は別途申し受けます。
+            </p>
           </div>
         </section>
 
