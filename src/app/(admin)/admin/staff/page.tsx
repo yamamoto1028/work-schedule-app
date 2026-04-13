@@ -2,20 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent } from '@/components/ui/card'
 import StaffTable from '@/components/staff/staff-table'
 import StaffCreateDialog from '@/components/staff/staff-create-dialog'
+import { getAdminSession } from '@/lib/server/session'
 
 export default async function StaffPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const [session, supabase] = await Promise.all([getAdminSession(), createClient()])
+  if (!session) return null
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('facility_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.facility_id) return null
-  const facilityId = userData.facility_id
+  const { facilityId } = session
 
   const [staffResult, responsibleRolesResult, shiftTypesResult, facilityResult, floorsResult, blocksResult] = await Promise.all([
     supabase

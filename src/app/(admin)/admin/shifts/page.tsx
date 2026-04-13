@@ -1,20 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ShiftCalendarPage from '@/components/shift-calendar/shift-calendar-page'
+import { getAdminSession } from '@/lib/server/session'
 
 export default async function ShiftsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const [session, supabase] = await Promise.all([getAdminSession(), createClient()])
+  if (!session) redirect('/login')
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('facility_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.facility_id) redirect('/login')
-  const facilityId = userData.facility_id
+  const { facilityId } = session
 
   const now = new Date()
   const year = now.getFullYear()

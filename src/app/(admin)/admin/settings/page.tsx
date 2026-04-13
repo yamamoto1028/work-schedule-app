@@ -9,20 +9,13 @@ import ReminderSettings from '@/components/settings/reminder-settings'
 import BlocksSettings from '@/components/settings/blocks-settings'
 import PlanGate from '@/components/plan-gate'
 import { Badge } from '@/components/ui/badge'
+import { getAdminSession } from '@/lib/server/session'
 
 export default async function SettingsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const [session, supabase] = await Promise.all([getAdminSession(), createClient()])
+  if (!session) return null
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('facility_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.facility_id) return null
-  const facilityId = userData.facility_id
+  const { facilityId } = session
 
   const [facilityResult, shiftTypesResult, leaveTypesResult, responsibleRolesResult, constraintResult, floorsResult, blocksResult] = await Promise.all([
     supabase.from('facilities').select('*').eq('id', facilityId).single(),

@@ -2,21 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import LeaveManagement from '@/components/leave-management-admin'
 import LeaveWishReminderPanel from '@/components/leave-wish-reminder-panel'
+import { getAdminSession } from '@/lib/server/session'
 
 export default async function LeavesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const [session, supabase] = await Promise.all([getAdminSession(), createClient()])
+  if (!session) redirect('/login')
+  if (session.role !== 'admin') redirect('/staff/my-shifts')
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role, facility_id')
-    .eq('id', user.id)
-    .single()
-
-  if (userData?.role !== 'admin') redirect('/staff/my-shifts')
-
-  const facilityId = userData.facility_id!
+  const { facilityId } = session
 
   // 来月の年月を計算
   const now = new Date()

@@ -3,19 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Calendar, Users, ClipboardList, Bell } from 'lucide-react'
 import Link from 'next/link'
+import { getAdminSession } from '@/lib/server/session'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const [session, supabase] = await Promise.all([getAdminSession(), createClient()])
+  if (!session) return null
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('facility_id, display_name, facilities(name, type)')
-    .eq('id', user.id)
-    .single()
-
-  const facilityId = userData?.facility_id
+  const { facilityId } = session
 
   // 並列でデータ取得
   const [staffResult, pendingLeaveResult, shiftsResult] = await Promise.all([
@@ -27,15 +21,13 @@ export default async function DashboardPage() {
   const now = new Date()
   const currentMonth = `${now.getFullYear()}年${now.getMonth() + 1}月`
 
-  const facility = userData?.facilities as { name: string; type: string } | null
-
   return (
     <div className="space-y-8">
       {/* ヘッダー */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
         <p className="text-gray-500 mt-1">
-          {facility?.name} | {currentMonth}
+          {session.facility?.name} | {currentMonth}
         </p>
       </div>
 
