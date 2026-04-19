@@ -85,7 +85,7 @@ export default function ShiftTypesSettings({ facilityId, shiftTypes: initialType
     const supabase = createClient()
     const { error } = await supabase.from('shift_types').delete().eq('id', id)
     if (error) {
-      toast.error('削除に失敗しました（シフトに使用中の可能性があります）')
+      toast.error('削除できません。この勤務区分は既存のシフトで使用されています。削除の代わりに無効化をご利用ください。')
       return
     }
     setShiftTypes(shiftTypes.filter((t) => t.id !== id))

@@ -72,7 +72,7 @@ export default function LeaveTypesSettings({ facilityId, leaveTypes: initialType
     const supabase = createClient()
     const { error } = await supabase.from('leave_types').delete().eq('id', id)
     if (error) {
-      toast.error('削除に失敗しました')
+      toast.error('削除できません。この休暇区分には申請実績があります。削除の代わりに無効化をご利用ください。')
       return
     }
     setLeaveTypes(leaveTypes.filter((t) => t.id !== id))

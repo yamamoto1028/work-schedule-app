@@ -63,11 +63,25 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
     router.refresh()
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, name: string) => {
     const supabase = createClient()
+
+    // 紐付いているスタッフ数を事前確認（SET NULL 制約なので削除自体は通るが、スタッフの責任者区分がNULLになる）
+    const { count } = await supabase
+      .from('staff_profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('responsible_role_id', id)
+
+    if ((count ?? 0) > 0) {
+      const ok = window.confirm(
+        `「${name}」には ${count} 名のスタッフが紐付いています。\n削除すると、該当スタッフの責任者区分が未設定になります。\n本当に削除しますか？`
+      )
+      if (!ok) return
+    }
+
     const { error } = await supabase.from('responsible_roles').delete().eq('id', id)
     if (error) {
-      toast.error('削除に失敗しました（スタッフが紐付いている可能性があります）')
+      toast.error('削除に失敗しました')
       return
     }
     setRoles(roles.filter((r) => r.id !== id))
@@ -140,7 +154,7 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => handleDelete(role.id)}
+                    onClick={() => handleDelete(role.id, role.name)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
