@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { buildSystemPrompt, buildUserMessage, AIShiftInput } from '@/lib/ai/yomogi'
 import { createClient } from '@/lib/supabase/server'
+import { requireProPlan } from '@/lib/plan/check'
 
 export const maxDuration = 60
 
@@ -14,6 +15,9 @@ export async function POST(req: Request) {
   if (!body.facilityId) {
     return new Response('facilityId required', { status: 400 })
   }
+
+  const planError = await requireProPlan(body.facilityId, supabase)
+  if (planError) return planError
 
   const client = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,

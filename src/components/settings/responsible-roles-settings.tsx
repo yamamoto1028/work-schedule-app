@@ -119,7 +119,6 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
         body: JSON.stringify({ responsibleRoleId: role.id, canCreateShifts: value }),
       })
       const json = await res.json()
-      console.log('[sync-admin] response:', res.status, json)
       if (!res.ok) {
         toast.error(`スタッフ権限の同期に失敗しました: ${json.error ?? res.status}`)
       } else {

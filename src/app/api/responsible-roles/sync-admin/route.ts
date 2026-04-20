@@ -31,14 +31,11 @@ export async function POST(req: Request) {
 
   if (profilesError) return NextResponse.json({ error: profilesError.message }, { status: 500 })
   if (!profiles || profiles.length === 0) {
-    console.log('[sync-admin] no profiles found for responsibleRoleId:', responsibleRoleId)
     return NextResponse.json({ updated: 0 })
   }
 
   const userIds = profiles.map(p => p.user_id).filter(Boolean) as string[]
   const newRole = canCreateShifts ? 'admin' : 'staff'
-
-  console.log('[sync-admin] userIds:', userIds, 'newRole:', newRole)
 
   // @supabase/supabase-js で直接 service role クライアントを作成して RLS をバイパス
   const admin = createAdminClient(
@@ -51,8 +48,6 @@ export async function POST(req: Request) {
     .update({ role: newRole })
     .in('id', userIds)
     .select('id, role')
-
-  console.log('[sync-admin] update result:', updated, 'error:', updateError)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 

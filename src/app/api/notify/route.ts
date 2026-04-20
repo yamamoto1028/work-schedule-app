@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendShiftPublishedEmails, sendShiftReminderEmails, sendLeaveWishReminderEmails } from '@/lib/email'
 import { NextResponse } from 'next/server'
+import { requireProPlan } from '@/lib/plan/check'
 
 // POST /api/notify  body: { type: ..., facilityId, year, month, targetYear?, targetMonth? }
 export async function POST(req: Request) {
@@ -25,6 +26,9 @@ export async function POST(req: Request) {
 
   if (userData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   if (userData.facility_id !== body.facilityId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const planError = await requireProPlan(body.facilityId, supabase)
+  if (planError) return planError
 
   if (body.type === 'shift_published') {
     // 施設名取得
