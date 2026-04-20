@@ -1,7 +1,8 @@
 "use client";
 
 import { Sparkles, Building2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import UpgradeButton from "@/components/billing/upgrade-button";
+import EnterpriseInquiryButton from "@/components/billing/enterprise-inquiry-button";
 
 type Plan = 'free' | 'pro' | 'enterprise'
 
@@ -66,15 +67,11 @@ const featureList = isPro ? PRO_FEATURES : ENTERPRISE_FEATURES;
           </li>
         ))}
       </ul>
-      <Button
-        variant="outline"
-        className={isPro
-          ? 'border-emerald-400 text-emerald-700 hover:bg-emerald-100'
-          : 'border-violet-400 text-violet-700 hover:bg-violet-100'}
-        onClick={() => alert(`${planName} プランへのアップグレードについては管理者にお問い合わせください。`)}
-      >
-        {planName} にアップグレード
-      </Button>
+      {isPro ? (
+        <UpgradeButton className="border-emerald-400 text-emerald-700 hover:bg-emerald-100" variant="outline" />
+      ) : (
+        <EnterpriseInquiryButton className="border-violet-400 text-violet-700 hover:bg-violet-100" />
+      )}
     </div>
   );
 }

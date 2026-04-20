@@ -135,6 +135,52 @@ export async function sendLeaveWishReminderEmails(
   )
 }
 
+/** Enterprise プランお問い合わせ通知（YOMOGI 運営宛） */
+export async function sendEnterpriseInquiryToAdmin(params: {
+  facilityName: string
+  contactName: string
+  contactEmail: string
+  floorCount: number
+  blockCount: number
+  message: string
+}) {
+  const salesEmail = process.env.YOMOGI_SALES_EMAIL ?? FROM
+  await send(
+    salesEmail,
+    `【YOMOGI】Enterprise プランお問い合わせ: ${params.facilityName}`,
+    html(`
+<h2 style="color:#7c3aed;">Enterprise プランお問い合わせ</h2>
+<table style="border-collapse:collapse;width:100%;margin-top:12px;">
+  <tr><td style="padding:6px 16px 6px 0;color:#6b7280;white-space:nowrap;">施設名</td><td style="padding:6px 0;font-weight:600;">${params.facilityName}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b7280;white-space:nowrap;">担当者名</td><td style="padding:6px 0;">${params.contactName}</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b7280;white-space:nowrap;">メールアドレス</td><td style="padding:6px 0;"><a href="mailto:${params.contactEmail}">${params.contactEmail}</a></td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b7280;white-space:nowrap;">フロア数（予定）</td><td style="padding:6px 0;">${params.floorCount} フロア</td></tr>
+  <tr><td style="padding:6px 16px 6px 0;color:#6b7280;white-space:nowrap;">ブロック数（予定）</td><td style="padding:6px 0;">${params.blockCount} ブロック</td></tr>
+</table>
+${params.message ? `<h3 style="margin-top:20px;color:#374151;">ご要望・質問</h3><p style="background:#f9fafb;padding:12px;border-radius:6px;white-space:pre-wrap;">${params.message}</p>` : ''}
+`),
+  )
+}
+
+/** Enterprise プランお問い合わせ受付確認（施設管理者宛） */
+export async function sendEnterpriseInquiryAck(params: {
+  contactName: string
+  contactEmail: string
+  facilityName: string
+}) {
+  await send(
+    params.contactEmail,
+    '【YOMOGI】Enterprise プランのお問い合わせを受け付けました',
+    html(`
+<h2 style="color:#7c3aed;">お問い合わせありがとうございます</h2>
+<p>${params.contactName} 様、</p>
+<p><strong>${params.facilityName}</strong> からの Enterprise プランへのお問い合わせを受け付けました。</p>
+<p>担当者より <strong>2〜3営業日以内</strong> にご連絡いたします。今しばらくお待ちください。</p>
+<p style="margin-top:16px;font-size:13px;color:#6b7280;">※ このメールに返信いただいても対応できかねます。お急ぎの場合は直接ご連絡ください。</p>
+`),
+  )
+}
+
 /** 休暇申請却下通知 */
 export async function sendLeaveRejectedEmail(
   email: string,

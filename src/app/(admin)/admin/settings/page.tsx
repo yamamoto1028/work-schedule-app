@@ -10,6 +10,9 @@ import BlocksSettings from '@/components/settings/blocks-settings'
 import PlanGate from '@/components/plan-gate'
 import { Badge } from '@/components/ui/badge'
 import { getAdminSession } from '@/lib/server/session'
+import ManagePlanButton from '@/components/billing/manage-plan-button'
+import UpgradeButton from '@/components/billing/upgrade-button'
+import EnterpriseInquiryButton from '@/components/billing/enterprise-inquiry-button'
 
 export default async function SettingsPage() {
   const [session, supabase] = await Promise.all([getAdminSession(), createClient()])
@@ -33,15 +36,27 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">施設設定</h1>
-          <p className="text-gray-500 mt-1">勤務区分・休暇区分・制約ルール等を設定します</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">施設設定</h1>
+            <p className="text-gray-500 mt-1">勤務区分・休暇区分・制約ルール等を設定します</p>
+          </div>
+          {isPro && (
+            <Badge className={`text-white text-xs px-2 py-0.5 shrink-0 ${isEnterprise ? 'bg-violet-600' : 'bg-emerald-600'}`}>
+              {isEnterprise ? 'Enterprise' : 'Pro'}
+            </Badge>
+          )}
         </div>
-        {isPro && (
-          <Badge className={`text-white text-xs px-2 py-0.5 shrink-0 ${isEnterprise ? 'bg-violet-600' : 'bg-emerald-600'}`}>
-            {isEnterprise ? 'Enterprise' : 'Pro'}
-          </Badge>
+        {isEnterprise ? (
+          <ManagePlanButton />
+        ) : isPro ? (
+          <div className="flex items-center gap-2">
+            <EnterpriseInquiryButton label="Enterpriseへ" />
+            <ManagePlanButton />
+          </div>
+        ) : (
+          <UpgradeButton variant="outline" />
         )}
       </div>
 

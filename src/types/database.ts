@@ -75,6 +75,8 @@ export type Database = {
           leave_deadline_day: number | null
           leave_min_wishes: number
           plan: 'free' | 'pro' | 'enterprise'
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
         }
         Insert: {
           id?: string
@@ -87,6 +89,8 @@ export type Database = {
           leave_deadline_day?: number | null
           leave_min_wishes?: number
           plan?: 'free' | 'pro' | 'enterprise'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
         }
         Update: {
           id?: string
@@ -99,6 +103,8 @@ export type Database = {
           leave_deadline_day?: number | null
           leave_min_wishes?: number
           plan?: 'free' | 'pro' | 'enterprise'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
         }
         Relationships: []
       }
