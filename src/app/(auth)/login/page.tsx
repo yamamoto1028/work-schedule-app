@@ -3,7 +3,6 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,46 +20,34 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
-    const supabase = createClient()
+    try {
+      const res  = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const json = await res.json() as { role?: string; error?: string }
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (authError) {
-      setError('メールアドレスまたはパスワードが正しくありません')
-      setLoading(false)
-      return
-    }
-
-    if (data.user) {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .maybeSingle()
-
-      if (!userData) {
-        setError('アカウントが正しく設定されていません。管理者にお問い合わせください。')
-        await supabase.auth.signOut()
-        setLoading(false)
+      if (!res.ok || !json.role) {
+        setError(json.error ?? 'ログインに失敗しました')
         return
       }
 
-      if (userData.role === 'admin') {
+      if (json.role === 'admin') {
         router.push('/admin/dashboard')
       } else {
         router.push('/staff/my-shifts')
       }
+    } catch {
+      setError('ネットワークエラーが発生しました')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (
