@@ -3,9 +3,6 @@ import { stripe } from '@/lib/stripe/client'
 import { createServiceClient } from '@/lib/supabase/server'
 import type Stripe from 'stripe'
 
-// Webhook は生の body が必要なため Next.js のボディパースを無効化
-export const config = { api: { bodyParser: false } }
-
 async function updateFacilityPlan(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
   params: {
