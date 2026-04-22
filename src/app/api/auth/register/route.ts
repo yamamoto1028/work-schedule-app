@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendRegistrationConfirmEmail } from '@/lib/email'
 
 const DEFAULT_SHIFT_TYPES = {
   care_facility: [
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
   }
   const facilityId = facility.id
 
-  // ② Supabase Auth ユーザー作成（確認メール送信・email_confirm 省略で未確認状態）
+  // ② Supabase Auth ユーザー作成（未確認状態で作成し、後で確認リンクをメール送信）
   const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
     email: email.trim(),
     password,
@@ -130,6 +131,20 @@ export async function POST(req: Request) {
       facility_id: facilityId,
     }),
   ])
+
+  // ⑤ 確認リンクを生成して Resend で送信
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const { data: linkData } = await supabase.auth.admin.generateLink({
+    type: 'signup',
+    email: email.trim(),
+    password,
+    options: { redirectTo: `${appUrl}/auth/callback` },
+  })
+
+  const confirmUrl = linkData?.properties?.action_link
+  if (confirmUrl) {
+    await sendRegistrationConfirmEmail(email.trim(), displayName.trim(), confirmUrl)
+  }
 
   return NextResponse.json({ ok: true })
 }

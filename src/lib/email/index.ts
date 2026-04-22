@@ -135,6 +135,27 @@ export async function sendLeaveWishReminderEmails(
   )
 }
 
+/** 施設登録確認メール（管理者宛） */
+export async function sendRegistrationConfirmEmail(
+  email: string,
+  displayName: string,
+  confirmUrl: string,
+) {
+  await send(
+    email,
+    '【YOMOGI】メールアドレスの確認をお願いします',
+    html(`
+<h2 style="color:#059669;">YOMOGI へようこそ</h2>
+<p>${displayName} 様、</p>
+<p>ご登録ありがとうございます。以下のボタンからメールアドレスの確認を完了してください。</p>
+<a href="${confirmUrl}" style="display:inline-block;background:#059669;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;margin:16px 0;font-weight:bold;">メールアドレスを確認する</a>
+<p style="font-size:13px;color:#6b7280;margin-top:16px;">このリンクは24時間有効です。ボタンが押せない場合は以下の URL をブラウザに貼り付けてください。</p>
+<p style="font-size:12px;color:#9ca3af;word-break:break-all;">${confirmUrl}</p>
+<p style="font-size:12px;color:#9ca3af;margin-top:12px;">このメールに心当たりがない場合は無視してください。</p>
+`),
+  )
+}
+
 /** Enterprise プランお問い合わせ通知（YOMOGI 運営宛） */
 export async function sendEnterpriseInquiryToAdmin(params: {
   facilityName: string
