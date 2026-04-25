@@ -25,9 +25,16 @@ export async function updateSession(request: NextRequest) {
   )
 
   // セッションの更新（必須）
+  // 無効な refresh token の場合は getUser がエラーを返すが、未ログインとして扱う
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+
+  if (authError?.status === 400) {
+    // 無効な refresh token → クッキーをクリアして未ログイン状態にする
+    try { await supabase.auth.signOut() } catch { /* ignore */ }
+  }
 
   const { pathname } = request.nextUrl
 

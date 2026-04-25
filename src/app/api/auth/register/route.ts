@@ -83,11 +83,13 @@ export async function POST(req: Request) {
   }
   const facilityId = facility.id
 
-  // ② Supabase Auth ユーザー作成（未確認状態で作成し、後で確認リンクをメール送信）
+  // ② Supabase Auth ユーザー作成
+  // 開発環境ではメール確認をスキップして即ログイン可能にする
+  const isDev = process.env.NODE_ENV !== 'production'
   const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
     email: email.trim(),
     password,
-    email_confirm: false,
+    email_confirm: isDev,  // 本番のみ false（要メール確認）
   })
 
   if (authErr || !authData.user) {
