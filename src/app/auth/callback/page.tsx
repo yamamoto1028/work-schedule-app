@@ -4,42 +4,51 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-// Supabase がメール確認リンクのクリック後にリダイレクトするページ
-// フラグメント (#access_token=...) / クエリ (?code=...) の両方に対応
+// Supabase がメール確認リンクのクリック後にリダイレクトするページ。
+// generateLink(signup) はハッシュ形式 (#access_token=...) でトークンを返すため
+// URL フラグメントを手動パースして setSession を呼ぶ。
 export default function AuthCallbackPage() {
   const router = useRouter()
 
   useEffect(() => {
     const supabase = createClient()
-    let handled = false
 
-    const handle = (session: boolean) => {
-      if (handled) return
-      handled = true
-      if (session) {
-        router.replace('/admin/dashboard')
-      } else {
-        router.replace('/login')
+    async function handleCallback() {
+      const hash = window.location.hash
+
+      // ① ハッシュに access_token が含まれる場合（generateLink の implicit flow）
+      if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.slice(1))
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token') ?? ''
+
+        if (accessToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (!error) {
+            router.replace('/admin/dashboard')
+            return
+          }
+        }
       }
+
+      // ② クエリに code が含まれる場合（PKCE flow）
+      const code = new URLSearchParams(window.location.search).get('code')
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (!error) {
+          router.replace('/admin/dashboard')
+          return
+        }
+      }
+
+      // ③ どちらもなければログインへ
+      router.replace('/login')
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // INITIAL_SESSION は URL 処理前に発火するためスキップ
-      if (event === 'INITIAL_SESSION') return
-      handle(!!session)
-    })
-
-    // フォールバック: 8秒後もイベントがなければセッションを直接確認
-    const timeout = setTimeout(async () => {
-      if (handled) return
-      const { data: { session } } = await supabase.auth.getSession()
-      handle(!!session)
-    }, 8000)
-
-    return () => {
-      subscription.unsubscribe()
-      clearTimeout(timeout)
-    }
+    handleCallback()
   }, [router])
 
   return (
