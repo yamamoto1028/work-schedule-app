@@ -11,19 +11,35 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const supabase = createClient()
+    let handled = false
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          router.replace('/admin/dashboard')
-        } else if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
-          // セッションなし → ログインページへ
-          router.replace('/login')
-        }
+    const handle = (session: boolean) => {
+      if (handled) return
+      handled = true
+      if (session) {
+        router.replace('/admin/dashboard')
+      } else {
+        router.replace('/login')
       }
-    )
+    }
 
-    return () => subscription.unsubscribe()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // INITIAL_SESSION は URL 処理前に発火するためスキップ
+      if (event === 'INITIAL_SESSION') return
+      handle(!!session)
+    })
+
+    // フォールバック: 8秒後もイベントがなければセッションを直接確認
+    const timeout = setTimeout(async () => {
+      if (handled) return
+      const { data: { session } } = await supabase.auth.getSession()
+      handle(!!session)
+    }, 8000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [router])
 
   return (
