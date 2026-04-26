@@ -10,8 +10,7 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient()
     await supabase.auth.exchangeCodeForSession(code)
-    // セッションをクリアしてログインページで改めて認証させる
-    await supabase.auth.signOut()
+    return NextResponse.redirect(new URL('/admin/dashboard', request.url))
   }
 
   return NextResponse.redirect(new URL('/login', request.url))
