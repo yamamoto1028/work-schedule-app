@@ -5,7 +5,13 @@ import { createPortal } from 'react-dom'
 import { useDraggable } from '@dnd-kit/core'
 import { ConstraintViolation } from '@/lib/constraints/checker'
 import { ShiftRow } from './shift-calendar-page'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Trash2 } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 
 type ShiftType = {
   id: string
@@ -23,6 +29,18 @@ type Props = {
   violations: ConstraintViolation[]
   isPending: boolean
   onSelect: (shiftTypeId: string | null) => void
+}
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isMobile
 }
 
 function DraggableShiftBadge({
@@ -69,17 +87,102 @@ function DraggableShiftBadge({
   )
 }
 
+// ボトムシート内のシフト選択グリッド（モバイル用）
+function ShiftSelectSheet({
+  open,
+  onOpenChange,
+  shiftTypes,
+  shift,
+  onSelect,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  shiftTypes: ShiftType[]
+  shift: ShiftRow | undefined
+  onSelect: (id: string | null) => void
+}) {
+  const dayTypes = shiftTypes.filter(t => t.time_zone === 'day')
+  const nightTypes = shiftTypes.filter(t => t.time_zone === 'night')
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" showCloseButton={false} className="pb-8 px-4">
+        <SheetHeader className="px-0 pb-3">
+          <SheetTitle className="text-base">シフトを選択</SheetTitle>
+        </SheetHeader>
+
+        {dayTypes.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 mb-2">日中帯</p>
+            <div className="grid grid-cols-3 gap-2">
+              {dayTypes.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => onSelect(t.id)}
+                  className="flex flex-col items-center gap-1 p-3 rounded-xl border border-gray-100 active:opacity-70 transition-opacity"
+                >
+                  <span
+                    className="w-10 h-10 flex items-center justify-center rounded-lg text-white text-lg font-bold"
+                    style={{ backgroundColor: t.color }}
+                  >
+                    {t.short_name}
+                  </span>
+                  <span className="text-xs text-gray-700 truncate w-full text-center">{t.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {nightTypes.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 mb-2">夜間帯</p>
+            <div className="grid grid-cols-3 gap-2">
+              {nightTypes.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => onSelect(t.id)}
+                  className="flex flex-col items-center gap-1 p-3 rounded-xl border border-gray-100 active:opacity-70 transition-opacity"
+                >
+                  <span
+                    className="w-10 h-10 flex items-center justify-center rounded-lg text-white text-lg font-bold"
+                    style={{ backgroundColor: t.color }}
+                  >
+                    {t.short_name}
+                  </span>
+                  <span className="text-xs text-gray-700 truncate w-full text-center">{t.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {shift && (
+          <button
+            onClick={() => onSelect(null)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-500 border border-red-100 active:opacity-70 transition-opacity"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="text-sm">シフトを削除</span>
+          </button>
+        )}
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 export default function ShiftCell({ shift, userId, date, shiftTypes, violations, isPending, onSelect }: Props) {
   const [open, setOpen] = useState(false)
   const [popupPos, setPopupPos] = useState({ top: 0, left: 0 })
   const ref = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
 
   const shiftType = shift ? shiftTypes.find(t => t.id === shift.shift_type_id) : undefined
   const hasError = violations.some(v => v.severity === 'error')
   const hasWarning = violations.some(v => v.severity === 'warning')
 
   useEffect(() => {
-    if (!open) return
+    if (!open || isMobile) return
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (target.closest('[data-shift-popup]')) return
@@ -87,10 +190,10 @@ export default function ShiftCell({ shift, userId, date, shiftTypes, violations,
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  }, [open, isMobile])
 
   const openPopup = () => {
-    if (ref.current) {
+    if (!isMobile && ref.current) {
       const rect = ref.current.getBoundingClientRect()
       setPopupPos({
         top: rect.bottom + 4,
@@ -135,7 +238,19 @@ export default function ShiftCell({ shift, userId, date, shiftTypes, violations,
         </button>
       )}
 
-      {open && createPortal(
+      {/* モバイル: ボトムシート */}
+      {isMobile && (
+        <ShiftSelectSheet
+          open={open}
+          onOpenChange={setOpen}
+          shiftTypes={shiftTypes}
+          shift={shift}
+          onSelect={handleSelect}
+        />
+      )}
+
+      {/* デスクトップ: 固定位置ポップアップ */}
+      {!isMobile && open && createPortal(
         <div
           data-shift-popup=""
           className="fixed z-9999 bg-white rounded-lg shadow-xl border border-gray-200 p-2 min-w-35"
