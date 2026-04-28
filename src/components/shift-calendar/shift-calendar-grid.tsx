@@ -6,7 +6,7 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -89,7 +89,7 @@ export default function ShiftCalendarGrid({
   const [activeData, setActiveData] = useState<{ shiftTypeId: string } | null>(null)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } })
   )
 
   const dates = getDatesInMonth(year, month)
