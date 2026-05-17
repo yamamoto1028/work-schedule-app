@@ -138,6 +138,7 @@ export type Database = {
           role: 'admin' | 'staff'
           avatar_url: string | null
           is_active: boolean
+          is_virtual: boolean
           created_at: string
         }
         Insert: {
@@ -148,6 +149,7 @@ export type Database = {
           role: 'admin' | 'staff'
           avatar_url?: string | null
           is_active?: boolean
+          is_virtual?: boolean
           created_at?: string
         }
         Update: {
@@ -158,6 +160,7 @@ export type Database = {
           role?: 'admin' | 'staff'
           avatar_url?: string | null
           is_active?: boolean
+          is_virtual?: boolean
           created_at?: string
         }
         Relationships: [

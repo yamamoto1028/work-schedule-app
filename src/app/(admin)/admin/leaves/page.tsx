@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import LeaveManagement from '@/components/leave-management-admin'
 import LeaveWishReminderPanel from '@/components/leave-wish-reminder-panel'
+import ProxyLeaveInput from '@/components/proxy-leave-input'
 import { getAdminSession } from '@/lib/server/session'
 
 export default async function LeavesPage() {
@@ -20,7 +21,7 @@ export default async function LeavesPage() {
   const lastDay   = new Date(targetYear, targetMonth, 0).getDate()
   const endDate   = `${monthStr}-${String(lastDay).padStart(2, '0')}`
 
-  const [leavesResult, facilityResult, staffResult, wishTypesResult] = await Promise.all([
+  const [leavesResult, facilityResult, staffResult, wishTypesResult, leaveTypesResult, proxyLeavesResult] = await Promise.all([
     supabase
       .from('leave_requests')
       .select(`
@@ -50,12 +51,52 @@ export default async function LeavesPage() {
       .select('id')
       .eq('facility_id', facilityId)
       .eq('is_wish', true),
+
+    supabase
+      .from('leave_types')
+      .select('id, name, color')
+      .eq('facility_id', facilityId)
+      .eq('is_active', true)
+      .order('sort_order'),
+
+    // 管理者が代理登録した approved 申請を取得（reviewed_by が設定されているもの）
+    supabase
+      .from('leave_requests')
+      .select(`
+        id, date, user_id,
+        users!user_id(display_name),
+        leave_types(name)
+      `)
+      .eq('facility_id', facilityId)
+      .eq('status', 'approved')
+      .not('reviewed_by', 'is', null)
+      .order('date', { ascending: true })
+      .limit(100),
   ])
 
   const minWishes   = facilityResult.data?.leave_min_wishes   ?? 2
   const deadlineDay = facilityResult.data?.leave_deadline_day ?? null
   const wishTypeIds = (wishTypesResult.data ?? []).map(t => t.id)
   const allStaff    = staffResult.data ?? []
+  const leaveTypes  = leaveTypesResult.data ?? []
+
+  type ProxyLeaveRow = {
+    id: string
+    date: string
+    user_id: string
+    users: { display_name: string } | null
+    leave_types: { name: string } | null
+  }
+  const proxyLeaves = (proxyLeavesResult.data ?? []).map((r) => {
+    const row = r as unknown as ProxyLeaveRow
+    return {
+      id: row.id,
+      date: row.date,
+      user_id: row.user_id,
+      user_name: row.users?.display_name ?? '',
+      leave_type_name: row.leave_types?.name ?? '',
+    }
+  })
 
   // スタッフ別の希望休提出数を集計
   const submittedCountMap = new Map<string, number>()
@@ -84,6 +125,13 @@ export default async function LeavesPage() {
         <h1 className="text-2xl font-bold text-gray-900">休暇申請管理</h1>
         <p className="text-gray-500 mt-1">スタッフからの休暇申請を承認・却下します</p>
       </div>
+
+      {/* 代理希望休入力 */}
+      <ProxyLeaveInput
+        staff={allStaff}
+        leaveTypes={leaveTypes}
+        existingProxyLeaves={proxyLeaves}
+      />
 
       {/* 希望休督促パネル */}
       <LeaveWishReminderPanel

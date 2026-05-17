@@ -3,6 +3,95 @@ import { sendLeaveApprovedEmail, sendLeaveRejectedEmail } from '@/lib/email'
 import { getMonthRange } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 
+// POST /api/leaves  管理者による代理希望休入力
+// body: { target_user_id, leave_type_id, date, reason? }
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => null)
+  if (!body) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: adminData } = await supabase
+    .from('users')
+    .select('role, facility_id')
+    .eq('id', user.id)
+    .single()
+
+  if (adminData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { target_user_id, leave_type_id, date, reason } = body as {
+    target_user_id: string
+    leave_type_id: string
+    date: string
+    reason?: string
+  }
+
+  if (!target_user_id || !leave_type_id || !date) {
+    return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 })
+  }
+
+  const service = await createServiceClient()
+
+  // 同日に同ユーザーの申請が既にないか確認
+  const { data: existing } = await service
+    .from('leave_requests')
+    .select('id')
+    .eq('facility_id', adminData.facility_id!)
+    .eq('user_id', target_user_id)
+    .eq('date', date)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json({ error: 'この日付には既に申請が存在します' }, { status: 409 })
+  }
+
+  const { error } = await service.from('leave_requests').insert({
+    facility_id: adminData.facility_id!,
+    user_id: target_user_id,
+    leave_type_id,
+    date,
+    reason: reason ?? null,
+    status: 'approved',
+    reviewed_by: user.id,
+  })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
+}
+
+// DELETE /api/leaves?id=  管理者による代理入力削除
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: adminData } = await supabase
+    .from('users')
+    .select('role, facility_id')
+    .eq('id', user.id)
+    .single()
+
+  if (adminData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const service = await createServiceClient()
+  const { error } = await service
+    .from('leave_requests')
+    .delete()
+    .eq('id', id)
+    .eq('facility_id', adminData.facility_id!)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
+}
+
 // GET /api/leaves?facilityId=&from=&to=&status=
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,21 +21,11 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
-import { UserPlus, Loader2 } from 'lucide-react'
+import { UserPlus, Loader2, UserCheck, UserCog } from 'lucide-react'
 import { toggleArrayItem } from '@/lib/utils'
 
-type ResponsibleRole = {
-  id: string
-  name: string
-  color: string
-}
-
-type ShiftType = {
-  id: string
-  name: string
-  short_name: string
-}
-
+type ResponsibleRole = { id: string; name: string; color: string }
+type ShiftType = { id: string; name: string; short_name: string }
 type Floor = { id: string; name: string; sort_order: number }
 type Block = { id: string; floor_id: string | null; name: string; color: string; sort_order: number }
 
@@ -49,89 +38,67 @@ type Props = {
   blocks?: Block[]
 }
 
-export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftTypes, plan = 'free', floors = [], blocks = [] }: Props) {
+const INITIAL_FORM = {
+  display_name: '',
+  email: '',
+  password: '',
+  employment_type: '',
+  position: '',
+  responsible_role_id: 'none',
+  staff_grade: 'full' as 'full' | 'half' | 'new',
+  can_night_shift: true,
+  phone: '',
+  allowed_shift_type_ids: [] as string[],
+  block_id: 'none',
+}
+
+export default function StaffCreateDialog({ responsibleRoles, shiftTypes, plan = 'free', floors = [], blocks = [] }: Props) {
   const router = useRouter()
   const isEnterprise = plan === 'enterprise'
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({
-    display_name: '',
-    email: '',
-    password: '',
-    employment_type: '',
-    position: '',
-    responsible_role_id: 'none',
-    staff_grade: 'full' as 'full' | 'half' | 'new',
-    can_night_shift: true,
-    phone: '',
-    allowed_shift_type_ids: [] as string[],
-    block_id: 'none',
-  })
+  const [isVirtual, setIsVirtual] = useState(false)
+  const [form, setForm] = useState(INITIAL_FORM)
 
   const toggleShiftType = (id: string) => {
     setForm(prev => ({ ...prev, allowed_shift_type_ids: toggleArrayItem(prev.allowed_shift_type_ids, id) }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
 
-    const supabase = createClient()
-
-    // Supabase Auth でユーザー作成（管理者がinvite）
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: {
-          facility_id: facilityId,
-          display_name: form.display_name,
-          role: 'staff',
-        },
-      },
+    const res = await fetch('/api/staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        display_name: form.display_name,
+        email: isVirtual ? undefined : form.email,
+        password: isVirtual ? undefined : form.password,
+        is_virtual: isVirtual,
+        employment_type: form.employment_type || undefined,
+        position: form.position || undefined,
+        responsible_role_id: form.responsible_role_id === 'none' ? undefined : form.responsible_role_id,
+        staff_grade: form.staff_grade,
+        can_night_shift: form.can_night_shift,
+        phone: form.phone || undefined,
+        allowed_shift_type_ids: form.allowed_shift_type_ids,
+        block_id: form.block_id === 'none' ? undefined : form.block_id,
+      }),
     })
 
-    if (authError || !authData.user) {
-      toast.error('アカウント作成に失敗しました: ' + authError?.message)
-      setLoading(false)
-      return
-    }
+    const json = await res.json() as { ok?: boolean; error?: string }
 
-    // staff_profiles の作成
-    const { error: profileError } = await supabase.from('staff_profiles').insert({
-      user_id: authData.user.id,
-      facility_id: facilityId,
-      employment_type: form.employment_type || null,
-      position: form.position || null,
-      responsible_role_id: form.responsible_role_id === 'none' ? null : form.responsible_role_id,
-      staff_grade: form.staff_grade,
-      can_night_shift: form.can_night_shift,
-      phone: form.phone || null,
-      allowed_shift_type_ids: form.allowed_shift_type_ids,
-      block_id: form.block_id === 'none' ? null : form.block_id,
-    })
-
-    if (profileError) {
-      toast.error('プロフィール作成に失敗しました')
+    if (!res.ok || !json.ok) {
+      toast.error(json.error ?? 'スタッフの追加に失敗しました')
       setLoading(false)
       return
     }
 
     toast.success(`${form.display_name}さんを追加しました`)
     setOpen(false)
-    setForm({
-      display_name: '',
-      email: '',
-      password: '',
-      employment_type: '',
-      position: '',
-      responsible_role_id: 'none',
-      staff_grade: 'full',
-      can_night_shift: true,
-      phone: '',
-      allowed_shift_type_ids: [],
-      block_id: 'none',
-    })
+    setForm(INITIAL_FORM)
+    setIsVirtual(false)
     router.refresh()
     setLoading(false)
   }
@@ -141,10 +108,41 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
       <DialogTrigger className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
         <UserPlus className="h-4 w-4" />スタッフ追加
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>スタッフ追加</DialogTitle>
         </DialogHeader>
+
+        {/* モード切替 */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
+          <button
+            type="button"
+            onClick={() => setIsVirtual(false)}
+            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              !isVirtual ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <UserCheck className="h-4 w-4" />
+            通常（ログイン可）
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsVirtual(true)}
+            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              isVirtual ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <UserCog className="h-4 w-4" />
+            管理者のみ管理
+          </button>
+        </div>
+
+        {isVirtual && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            管理者のみ管理モード：スタッフはアプリにログインしません。管理者が希望休・シフトを代理で設定します。
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -166,28 +164,31 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>メールアドレス *</Label>
-            <Input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="yamada@facility.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>初期パスワード *</Label>
-            <Input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="8文字以上"
-              minLength={8}
-              required
-            />
-          </div>
+          {!isVirtual && (
+            <>
+              <div className="space-y-2">
+                <Label>メールアドレス *</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="yamada@facility.com"
+                  required={!isVirtual}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>初期パスワード *</Label>
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="8文字以上"
+                  minLength={8}
+                  required={!isVirtual}
+                />
+              </div>
+            </>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -253,9 +254,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
               >
                 <SelectTrigger>
                   <span>
-                    {form.block_id === 'none'
-                      ? '未割当'
-                      : blocks.find(b => b.id === form.block_id)?.name ?? '未割当'}
+                    {form.block_id === 'none' ? '未割当' : blocks.find(b => b.id === form.block_id)?.name ?? '未割当'}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
@@ -265,9 +264,7 @@ export default function StaffCreateDialog({ facilityId, responsibleRoles, shiftT
                         const fb = blocks.filter(b => b.floor_id === f.id)
                         if (fb.length === 0) return null
                         return fb.map(b => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {f.name} / {b.name}
-                          </SelectItem>
+                          <SelectItem key={b.id} value={b.id}>{f.name} / {b.name}</SelectItem>
                         ))
                       })
                     : blocks.map(b => (
