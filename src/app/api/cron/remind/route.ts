@@ -38,7 +38,7 @@ export async function GET(req: Request) {
   const curLastDay   = new Date(curYear, curMonth, 0).getDate()
   const curEnd       = `${curMonthStr}-${String(curLastDay).padStart(2, '0')}`
 
-  const service = await createServiceClient()
+  const service = createServiceClient()
 
   // 現在時刻が reminder_hour_jst と一致する施設を取得
   const { data: facilities } = await service

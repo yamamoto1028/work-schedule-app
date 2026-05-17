@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   const { start, nextMonthStart } = getMonthRange(yearMonth)
 
   // サービスロールで RLS をバイパス
-  const service = await createServiceClient()
+  const service = createServiceClient()
 
   // leave_type の monthly_limit を取得
   const { data: ltData } = await service

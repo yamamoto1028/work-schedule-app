@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'メールアドレスとパスワードを入力してください' }, { status: 400 })
   }
 
-  const service = await createServiceClient()
+  const service = createServiceClient()
 
   // ─── 1. ロック状態の確認 ─────────────────────────────────────────
   const { data: attempt } = await service

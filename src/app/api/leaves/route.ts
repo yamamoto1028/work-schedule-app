@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 })
   }
 
-  const service = await createServiceClient()
+  const service = createServiceClient()
 
   // 同日に同ユーザーの申請が既にないか確認
   const { data: existing } = await service
@@ -80,7 +80,7 @@ export async function DELETE(req: Request) {
 
   if (adminData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const service = await createServiceClient()
+  const service = createServiceClient()
   const { error } = await service
     .from('leave_requests')
     .delete()
@@ -210,7 +210,7 @@ export async function PATCH(req: Request) {
 
   // アプリ内通知挿入
   if (staffUser) {
-    const service = await createServiceClient()
+    const service = createServiceClient()
     await service.from('notifications').insert({
       facility_id: leave.facility_id,
       user_id: leave.user_id,

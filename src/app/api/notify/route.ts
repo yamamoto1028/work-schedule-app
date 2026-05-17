@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     const message = `${body.year}年${body.month}月のシフトが公開されました`
 
     // DB 通知挿入（サービスロールで RLS バイパス）
-    const service = await createServiceClient()
+    const service = createServiceClient()
     await service.from('notifications').insert(
       staff.map(s => ({
         facility_id: body.facilityId,
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
       .single()
 
     // published（未確認）シフトを持つスタッフのIDを取得
-    const service = await createServiceClient()
+    const service = createServiceClient()
     const { data: publishedShifts } = await service
       .from('shifts')
       .select('user_id')
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
     const lastDay   = new Date(targetYear, targetMonth, 0).getDate()
     const endDate   = `${monthStr}-${String(lastDay).padStart(2, '0')}`
 
-    const service = await createServiceClient()
+    const service = createServiceClient()
 
     // 施設設定（leave_min_wishes, leave_deadline_day）
     const { data: facility } = await supabase

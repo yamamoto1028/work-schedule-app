@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
   }
 
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
 
   switch (event.type) {
     // ✅ 決済完了 → Pro / Enterprise に昇格

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (adminData?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const facilityId = adminData.facility_id!
-  const service = await createServiceClient()
+  const service = createServiceClient()
 
   const {
     display_name,

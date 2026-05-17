@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   }
 
   const type = facilityType as 'hospital' | 'care_facility'
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
 
   // ① 施設作成
   const { data: facility, error: facilityErr } = await supabase
