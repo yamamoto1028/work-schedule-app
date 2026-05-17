@@ -57,10 +57,23 @@ export async function POST(req: Request) {
   let userId: string
 
   if (is_virtual) {
-    // 仮想スタッフ: Auth アカウント不要。UUID + プレースホルダーメールで DB レコードのみ作成
+    // 仮想スタッフ: 誰も知らないランダムパスワードで Auth アカウントを作成（FK制約を満たすため）
+    // メール確認・ログインは不要なので email_confirm: true で確認済みとしてマーク
     const { randomUUID } = await import('crypto')
-    userId = randomUUID()
-    const virtualEmail = `virtual-${userId}@virtual.internal`
+    const virtualEmail = `virtual-${randomUUID()}@virtual.internal`
+    const randomPassword = randomUUID() + randomUUID()
+
+    const { data: authData, error: authErr } = await service.auth.admin.createUser({
+      email: virtualEmail,
+      password: randomPassword,
+      email_confirm: true,
+    })
+
+    if (authErr || !authData.user) {
+      return NextResponse.json({ error: 'スタッフの作成に失敗しました' }, { status: 500 })
+    }
+
+    userId = authData.user.id
 
     const { error: userErr } = await service.from('users').insert({
       id: userId,
@@ -72,6 +85,7 @@ export async function POST(req: Request) {
     })
 
     if (userErr) {
+      await service.auth.admin.deleteUser(userId)
       return NextResponse.json({ error: 'スタッフ情報の保存に失敗しました' }, { status: 500 })
     }
   } else {
