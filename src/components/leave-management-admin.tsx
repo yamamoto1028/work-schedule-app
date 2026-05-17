@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,6 +38,10 @@ export default function LeaveManagement({ leaves: initialLeaves }: Props) {
   const router = useRouter()
   const [leaves, setLeaves] = useState(initialLeaves)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+
+  useEffect(() => {
+    setLeaves(initialLeaves)
+  }, [initialLeaves])
   const [processing, setProcessing] = useState<string | null>(null)
 
   const handleAction = async (id: string, status: 'approved' | 'rejected' | 'pending') => {
