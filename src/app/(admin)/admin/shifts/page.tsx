@@ -19,7 +19,7 @@ export default async function ShiftsPage() {
       .select(`
         id, display_name,
         staff_profiles(
-          employment_type, position, can_night_shift, staff_grade,
+          employment_type, position, can_night_shift, staff_grade, max_monthly_shifts,
           allowed_shift_type_ids, block_id,
           responsible_roles(name, color)
         )

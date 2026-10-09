@@ -41,7 +41,7 @@ const constraintMeta: Record<string, { label: string; description: string; categ
   max_consecutive_day_only: { label: '日中帯のみスタッフの連勤上限', description: '超えたら翌日休みを挿入', category: 'A', valueField: { key: 'days', label: '上限日数', min: 1, max: 14 } },
   max_consecutive_with_night: { label: '夜勤ありスタッフの連勤上限', description: '夜勤明け含む', category: 'A', valueField: { key: 'days', label: '上限日数', min: 1, max: 14 } },
   max_consecutive_days: { label: '全スタッフ共通の連続勤務最大日数', description: '', category: 'A', valueField: { key: 'days', label: '最大日数', min: 1, max: 14 } },
-  min_days_off_per_month: { label: '月間最低休日保証日数', description: '', category: 'A', valueField: { key: 'days', label: '最低日数', min: 0, max: 31 } },
+  min_days_off_per_month: { label: '月の公休数（基本値）', description: 'シフト自動作成で使う公休数。シフト画面で月ごとに変更できます（希望休は公休に含み、有給などは別枠）', category: 'A', valueField: { key: 'days', label: '公休数', min: 0, max: 31 } },
   min_weekly_days_off: { label: '週あたり最低休日数', description: '', category: 'A', valueField: { key: 'days', label: '最低日数', min: 0, max: 7 } },
   max_monthly_shifts: { label: '月最大勤務数（全スタッフ共通）', description: 'スタッフ個人設定で上書き可', category: 'A', valueField: { key: 'shifts', label: '最大勤務数', min: 1, max: 31 } },
   night_shift_equal_distribution: { label: '夜勤回数を均等配分する', description: '夜勤対象スタッフ間で均等', category: 'B' },

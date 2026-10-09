@@ -214,27 +214,28 @@ const shifts = useMemo(() => shiftsData ?? [], [shiftsData])
 
 ---
 
-### 7. AI・ヨモギ主任エージェント
+### 7. シフト自動作成・ヨモギ主任エージェント
 
-**担当範囲**: Claude API 連携・ヨモギ主任 UI・シフト自動生成・不満スコア
+**担当範囲**: ルールベースのシフト自動作成エンジン・ヨモギ主任 UI・不満スコア
 
-**参照先**: `REQUIREMENTS.md 4.4`（AI シフト自動生成）
+**参照先**: `REQUIREMENTS.md 4.4`（シフト自動作成）、`REQUIREMENTS.md 4.5`（制約ルール設定）
 
 **責務**:
 
-- `app/api/ai/route.ts` で Claude API ストリーミングレスポンスを実装
-- `lib/ai/prompt.ts` にヨモギ主任のシステムプロンプトを定義
-- 施設タイプ（`hospital` / `care_facility`）でプロンプトを切り替える
-- `components/yomogi/` でストリーミングセリフのリアルタイム表示 UI を実装
-- AI が生成したシフト案を `shifts` テーブルに `status = draft` で保存する
-- 不満スコア（0〜100）の算出と可視化（スタッフ別バー + ヨモギ主任コメント）
+- `lib/scheduler/` のエンジンを保守する（LLM は使わない）
+  - `context.ts`: 入力の前処理・ハード制約判定（`hardCost()`）
+  - `construct.ts`: 土台づくり / `improve.ts`: 焼きなまし法による改善 / `objective.ts`: ソフト制約の重み
+  - `score.ts`: 不満スコア / `commentary.ts`: ヨモギ主任のセリフ（テンプレート）
+- `app/api/shifts/generate/route.ts` でサーバー側からデータを取得してエンジンを呼ぶ（保存はしない）
+- `components/yomogi/` で公休数の入力・作成結果・不満スコアを表示し、適用時に `status = draft` で一括保存する
+- 制約パラメータの解釈は `lib/constraints/rules.ts` を使い、制約チェッカーと判定を揃える
 
-**プロンプト設計の原則**（`REQUIREMENTS.md 4.4.5` より）:
+**セリフの原則**:
 
 ```
 キャラクター: ヨモギ主任（安芸弁、辛辣だがスタッフを褒める）
 施設タイプ:   hospital → ピリッとした口調 / care_facility → 人情味ある口調
-出力順序:     ①状況確認ぼやき → ②進捗コメント → ③完成報告 → ④シフトJSON → ⑤不満スコアJSON
+表示順序:     ①状況確認ぼやき → ②完成報告（人数不足・違反があれば警告）→ ③スタッフ別コメント
 ```
 
 **安芸弁の注意点**:
@@ -242,27 +243,12 @@ const shifts = useMemo(() => shiftsData ?? [], [shiftsData])
 - 「〜じゃけん」（語尾の「ん」をはっきり発音）— 備後弁の「〜けぇ」と混同しないこと
 - 「ぶち〜」（とても）、「たいぎい」（しんどい）、「ほいじゃけん」（だから）を積極的に使う
 
-**AI への入力データ型**（`REQUIREMENTS.md 4.4.2` より）:
-
-```typescript
-type AIShiftInput = {
-  facilityType: "hospital" | "care_facility";
-  targetMonth: string; // YYYY-MM
-  staff: StaffProfile[];
-  approvedLeaves: LeaveRequest[];
-  constraints: ConstraintSetting[];
-  shiftTypes: ShiftType[]; // time_zone 含む
-  responsibleRoles: ResponsibleRole[];
-  holidays: string[];
-};
-```
-
 **完了条件**:
 
-- ヨモギ主任のセリフがストリーミングでリアルタイム表示される
-- 生成されたシフトが `shifts` テーブルに `draft` で正しく保存される
+- `npm test` のエンジンのテスト（ハード制約違反ゼロ・公休数固定・seed 再現性）が通る
+- 作成したシフトが `shifts` テーブルに `draft` で正しく保存される
+- 人数が足りない枠が理由つきで表示される
 - 不満スコアがスタッフ別に表示され、高スコアは赤くハイライトされる
-- 安芸弁のセリフが自然に出力されている
 
 ---
 
@@ -354,7 +340,7 @@ DBエージェント（スキーマ確定）
   ↓
 承認フロー・通知エージェント（公開・メール）
   ↓
-AI・ヨモギ主任エージェント（自動生成・不満スコア）
+シフト自動作成・ヨモギ主任エージェント（自動作成・不満スコア）
   ↓
 Excel 出力エージェント（ダウンロード）
 ```
