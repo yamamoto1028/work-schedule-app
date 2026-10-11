@@ -28,7 +28,7 @@
 | データ取得     | SWR（クライアントサイドキャッシュ）                     |
 | バックエンド   | Next.js API Routes（サーバーレス）                      |
 | DB             | Supabase（PostgreSQL + Auth + Realtime）                |
-| AI             | Claude API `claude-sonnet-4-20250514`（ストリーミング） |
+| シフト自動作成 | ルールベースのエンジン `lib/scheduler`（LLM 不使用）    |
 | メール         | Resend                                                  |
 | Excel 出力     | ExcelJS（サーバーサイド）                               |
 
@@ -44,7 +44,7 @@ work-schedule-app/
 │   ├── (auth)/              # ログイン・登録
 │   ├── (admin)/             # 管理者画面
 │   │   ├── dashboard/       # loading.tsx / error.tsx 配置済み
-│   │   ├── shifts/          # シフト表・AI生成 / loading.tsx / error.tsx
+│   │   ├── shifts/          # シフト表・自動作成 / loading.tsx / error.tsx
 │   │   ├── staff/           # スタッフ管理 / loading.tsx / error.tsx
 │   │   ├── leaves/          # 休暇申請管理 / loading.tsx / error.tsx
 │   │   └── settings/        # 施設設定・各種マスタ・制約設定 / loading.tsx / error.tsx
@@ -53,11 +53,10 @@ work-schedule-app/
 │   │   └── requests/        # 休暇申請 / loading.tsx / error.tsx
 │   └── api/
 │       ├── shifts/          # シフト CRUD
+│       │   ├── generate/    # シフト自動作成（POST { facilityId, month, blockId?, seed? }）
 │       │   └── export/      # Excel 出力（GET ?month=YYYY-MM&facilityId=xxx）
 │       ├── leaves/          # 休暇申請 CRUD
 │       │   └── count/       # 未承認件数取得
-│       ├── ai/
-│       │   └── generate-shifts/ # Claude API ストリーミング
 │       ├── notify/          # Resend メール通知
 │       └── responsible-roles/sync-admin/
 ├── components/
@@ -69,7 +68,7 @@ work-schedule-app/
 │   └── ui/                  # shadcn/ui コンポーネント
 ├── lib/
 │   ├── supabase/            # DB クライアント（server / client / middleware）
-│   ├── ai/                  # Claude API ラッパー・ヨモギ主任プロンプト
+│   ├── scheduler/           # シフト自動作成エンジン・不満スコア・ヨモギ主任セリフ
 │   ├── constraints/         # 制約チェックロジック（5カテゴリ）
 │   └── utils.ts             # getMonthRange / toggleArrayItem など共通ユーティリティ
 ├── supabase/migrations/     # 001〜008 のマイグレーションファイル
@@ -90,9 +89,6 @@ work-schedule-app/
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=        # サーバーサイドのみ使用。クライアントでは絶対に使わない
-
-# Claude API
-ANTHROPIC_API_KEY=
 
 # Resend
 RESEND_API_KEY=
@@ -154,21 +150,28 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 ### 制約チェックロジック
 
-- 制約チェックは `lib/constraints/` 配下に5カテゴリ別にファイルを分けて実装
+- 制約チェックは `lib/constraints/` 配下にカテゴリ別にファイルを分けて実装（入口は `checker.ts`）
   - `category-a-consecutive.ts` — 連勤・休日ルール
   - `category-b-night.ts` — 夜勤回数・配置ルール
   - `category-c-staffing.ts` — シフト人数・構成ルール
   - `category-d-attribute.ts` — スタッフ属性別制約
-  - `category-e-event.ts` — 施設固有行事ルール
+  - `category-e-event.ts` — 施設固有行事ルール（未実装。実装時に追加する）
+- 制約パラメータの解決（連勤上限の選び方・公休数・夜勤上限など）は `lib/constraints/rules.ts` に集約し、
+  制約チェッカーとシフト自動作成エンジンの両方から使う。判定がズレないよう、片方だけに独自の解釈を書かないこと
 - 制約の適用優先度は `REQUIREMENTS.md 4.5` の「制約の適用優先度」セクションに従う
 - 日中帯・夜間帯の判定は `shift_types.time_zone` カラム（`'day'` / `'night'`）を必ず参照する。勤務区分名に依存しないこと
 
-### AI（ヨモギ主任）実装
+### シフト自動作成（ヨモギ主任）
 
-- プロンプト設計は `REQUIREMENTS.md 4.4.5` に従う
-- キャラクターは安芸弁（広島県西部の方言）を使う。備後弁と混同しないこと
+- LLM は使わない。`lib/scheduler/` のルールベースエンジンで作成する（仕様は `REQUIREMENTS.md 4.4`）
+  - `construct.ts`（土台づくり）→ `improve.ts`（焼きなまし法で改善）→ `index.ts` で制約チェッカーによる検証
+  - ハード制約は `context.ts` の `hardCost()`、ソフト制約の重みは `objective.ts` の `WEIGHTS`
+  - 新しい制約を足すときは、ハードなら `hardCost()`、ソフトなら `penalty()` に追加し、チェッカー側にも同じ判定を入れる
+- 同じ入力・同じ seed なら同じ結果になる。テストでも seed を固定する
+- 公休数は月ごとに固定。`min_days_off_per_month` の `value.monthly["YYYY-MM"]`（なければ `value.days`）。希望休（`is_wish`）は公休に含み、有給などは別枠。明けは出勤日
+- API は `app/api/shifts/generate/route.ts`。データはクライアントから受け取らずサーバーで DB から取得する（保存はしない。適用はクライアントから一括 insert）
+- セリフは `commentary.ts` のテンプレート。キャラクターは安芸弁（広島県西部の方言）を使う。備後弁と混同しないこと
 - 施設タイプ（`hospital` / `care_facility`）でトーンが切り替わる
-- ストリーミングレスポンスは `app/api/ai/route.ts` で処理し、フロントは `components/yomogi/` で受け取る
 
 ### Excel 出力
 
@@ -230,6 +233,8 @@ supabase db push
 supabase gen types typescript --local > types/database.ts
 # lint
 npm run lint
+# テスト（vitest。制約チェッカー・シフト自動作成エンジン）
+npm test
 ```
 
 ---
@@ -262,7 +267,7 @@ npm run lint
 ```
 Week 1（基盤）: ✅ セットアップ / DB / Auth / スタッフ CRUD / マスタ設定画面
 Week 2（コア）: ✅ カレンダー UI / D&D / 制約チェック / 承認フロー / 通知
-Week 3（AI）  : ✅ Claude API / ヨモギ主任 UI / AI 生成 / 不満スコア / 一覧リスト表示
+Week 3（AI）  : ✅ ヨモギ主任 UI / 自動作成 / 不満スコア / 一覧リスト表示（Claude API 生成はルールベースエンジンに置き換え済み）
 Week 4（完成）: ✅ エラー処理 / ローディング UI / SWR / レスポンシブ / Excel 出力 / デモデータ / Vercel デプロイ
 
 追加実装:

@@ -11,7 +11,9 @@ import PlanGate from '@/components/plan-gate'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2, FileDown, BellRing, Building2 } from 'lucide-react'
-import type { GeneratedShift, DissatisfactionScore, AIFixedShiftInput } from '@/lib/ai/yomogi'
+import { resolveMonthlyDaysOff } from '@/lib/constraints/rules'
+import type { SchedulerAssignment, StaffScore } from '@/lib/scheduler'
+import type { Json } from '@/types/database'
 
 type StaffMember = {
   id: string
@@ -21,6 +23,7 @@ type StaffMember = {
     position: string | null
     can_night_shift: boolean
     staff_grade: 'full' | 'half' | 'new'
+    max_monthly_shifts: number | null
     allowed_shift_type_ids: string[]
     block_id: string | null
     responsible_roles: { name: string; color: string } | null
@@ -119,22 +122,25 @@ export default function ShiftCalendarPage({
   const shifts = useMemo(() => shiftsData ?? [], [shiftsData])
 
   // SWR: 制約設定（施設単位で変わらないので長めにキャッシュ）
-  const { data: constraintsData } = useSWR(
+  const { data: constraintsData, mutate: mutateConstraints } = useSWR(
     ['constraints', facilityId],
     async () => {
       const { data } = await supabase
         .from('constraint_settings')
-        .select('constraint_key, is_enabled, value')
+        .select('id, constraint_key, is_enabled, value')
         .eq('facility_id', facilityId)
       return (data ?? []).map(c => ({
+        id: c.id,
         constraint_key: c.constraint_key,
         is_enabled: c.is_enabled,
-        value: (c.value as Record<string, number>) ?? {},
+        value: (c.value as Record<string, unknown> | null) ?? {},
       }))
     },
     { revalidateOnFocus: false, dedupingInterval: 60000 }
   )
   const constraints = useMemo(() => constraintsData ?? [], [constraintsData])
+  const daysOffSetting = constraints.find(c => c.constraint_key === 'min_days_off_per_month')
+  const daysOff = resolveMonthlyDaysOff(daysOffSetting, monthStr)
 
   const loading = isLoading
 
@@ -153,6 +159,8 @@ export default function ShiftCalendarPage({
       visibleStaff.map(m => [m.id, m.staff_profiles?.allowed_shift_type_ids ?? []])
     )
 
+    const profileMap = new Map(visibleStaff.map(m => [m.id, m.staff_profiles]))
+
     const entries: ShiftEntry[] = shifts.map(s => {
       const st = shiftTypes.find(t => t.id === s.shift_type_id)
       return {
@@ -161,8 +169,11 @@ export default function ShiftCalendarPage({
         shiftTypeId: s.shift_type_id,
         timeZone: st?.time_zone ?? 'day',
         shortName: st?.short_name ?? '',
+        shiftTypeName: st?.name,
         responsibleRoleName: staffRoleMap.get(s.user_id) ?? null,
         allowedShiftTypeIds: staffAllowedMap.get(s.user_id) ?? [],
+        staffGrade: profileMap.get(s.user_id)?.staff_grade,
+        maxMonthlyShifts: profileMap.get(s.user_id)?.max_monthly_shifts ?? null,
       }
     })
 
@@ -336,20 +347,45 @@ export default function ShiftCalendarPage({
     await mutateShifts(prev => (prev ?? []).filter(s => s.status !== 'draft'), false)
   }
 
-  const handleApplyAIShifts = async (generatedShifts: GeneratedShift[]) => {
-    for (const gs of generatedShifts) {
-      const existing = shifts.find(s => s.user_id === gs.user_id && s.date === gs.date)
-      if (existing) {
-        // 既存シフトは固定扱い — スキップ
-        continue
-      }
-      const { data } = await supabase
-        .from('shifts')
-        .insert({ facility_id: facilityId, user_id: gs.user_id, shift_type_id: gs.shift_type_id, date: gs.date, status: 'draft' })
-        .select('id, user_id, shift_type_id, date, status')
-        .single()
-      if (data) await mutateShifts(prev => [...(prev ?? []), data], false)
+  // 自動作成したシフトを一括で下書き保存する（作成後に埋まったセルはスキップ）
+  const handleApplyGeneratedShifts = async (generated: SchedulerAssignment[]) => {
+    const occupied = new Set(shifts.map(s => `${s.user_id}_${s.date}`))
+    const rows = generated
+      .filter(g => !occupied.has(`${g.userId}_${g.date}`))
+      .map(g => ({
+        facility_id: facilityId,
+        user_id: g.userId,
+        shift_type_id: g.shiftTypeId,
+        date: g.date,
+        status: 'draft' as const,
+        ...(isEnterprise && selectedBlockId ? { block_id: selectedBlockId } : {}),
+      }))
+    if (rows.length === 0) return
+    const { data, error } = await supabase
+      .from('shifts')
+      .insert(rows)
+      .select('id, user_id, shift_type_id, date, status')
+    if (error) {
+      window.alert(`シフトの適用に失敗しました。最新の状態を読み込み直します。\n${error.message}`)
+      await mutateShifts()
+      return
     }
+    if (data) await mutateShifts(prev => [...(prev ?? []), ...data], false)
+  }
+
+  // 月ごとの公休数を min_days_off_per_month の value.monthly に保存する
+  const handleDaysOffChange = async (days: number) => {
+    const prevValue = daysOffSetting?.value ?? {}
+    const prevMonthly = (prevValue.monthly as Record<string, number> | undefined) ?? {}
+    const value = { ...prevValue, monthly: { ...prevMonthly, [monthStr]: days } } as Json
+    if (daysOffSetting) {
+      await supabase.from('constraint_settings').update({ value }).eq('id', daysOffSetting.id)
+    } else {
+      await supabase
+        .from('constraint_settings')
+        .insert({ facility_id: facilityId, constraint_key: 'min_days_off_per_month', is_enabled: true, value })
+    }
+    await mutateConstraints()
   }
 
   const errorCount = violations.filter(v => v.severity === 'error').length
@@ -357,36 +393,6 @@ export default function ShiftCalendarPage({
   const hasDraft = shifts.some(s => s.status === 'draft')
   const hasPublished = shifts.some(s => s.status === 'published')
   const unconfirmedCount = new Set(shifts.filter(s => s.status === 'published').map(s => s.user_id)).size
-
-  // Enterprise: ブロック内スタッフのみ AI に渡す
-  const aiStaff = visibleStaff.map(s => ({
-    id: s.id,
-    display_name: s.display_name,
-    can_night_shift: s.staff_profiles?.can_night_shift ?? false,
-    staff_grade: s.staff_profiles?.staff_grade ?? 'full' as const,
-    position: s.staff_profiles?.position ?? null,
-    responsible_role: s.staff_profiles?.responsible_roles?.name ?? null,
-    allowed_shift_type_ids: s.staff_profiles?.allowed_shift_type_ids ?? [],
-  }))
-
-  const aiShiftTypes = shiftTypes.map(t => ({
-    id: t.id,
-    name: t.name,
-    short_name: t.short_name,
-    time_zone: t.time_zone,
-  }))
-
-  const aiFixedShifts: AIFixedShiftInput[] = shifts.map(s => {
-    const st = shiftTypes.find(t => t.id === s.shift_type_id)
-    const member = visibleStaff.find(m => m.id === s.user_id)
-    return {
-      user_id: s.user_id,
-      display_name: member?.display_name ?? s.user_id,
-      date: s.date,
-      shift_name: st?.name ?? '',
-      time_zone: st?.time_zone ?? 'day',
-    }
-  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -564,19 +570,17 @@ export default function ShiftCalendarPage({
           facilityType={facilityType}
           year={year}
           month={month}
-          staff={aiStaff}
-          shiftTypes={aiShiftTypes}
-          constraints={constraints}
-          fixedShifts={aiFixedShifts}
-          onApplyShifts={handleApplyAIShifts}
-          onScoresUpdate={(scores: DissatisfactionScore[]) => {
-            const map = new Map<string, number>()
-            scores.forEach(s => map.set(s.user_id, s.score))
-            setDissatisfactionScores(map)
+          blockId={isEnterprise ? selectedBlockId : null}
+          staff={visibleStaff}
+          daysOff={daysOff}
+          onDaysOffChange={handleDaysOffChange}
+          onApplyShifts={handleApplyGeneratedShifts}
+          onScoresUpdate={(scores: StaffScore[]) => {
+            setDissatisfactionScores(new Map(scores.map(s => [s.userId, s.score])))
           }}
         />
       ) : (
-        <PlanGate currentPlan={plan} requiredPlan="pro" feature="AIシフト自動生成（ヨモギ主任）" />
+        <PlanGate currentPlan={plan} requiredPlan="pro" feature="シフト自動作成（ヨモギ主任）" />
       )}
 
       {/* カレンダー / 一覧表示 */}
