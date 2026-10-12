@@ -1,16 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUserId } from '@/lib/server/session'
 import LeaveRequestForm from '@/components/leave-request-form'
 import LeaveRequestHistory from '@/components/leave-request-history'
 
 export default async function RequestsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const userId = await getAuthUserId()
+  if (!userId) return null
 
   const { data: userData } = await supabase
     .from('users')
     .select('facility_id')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   if (!userData?.facility_id) return null
@@ -21,7 +22,7 @@ export default async function RequestsPage() {
     supabase
       .from('leave_requests')
       .select('*, leave_types(name, color)')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(30),
   ])
@@ -43,7 +44,7 @@ export default async function RequestsPage() {
 
       <LeaveRequestForm
         facilityId={facilityId}
-        userId={user.id}
+        userId={userId}
         leaveTypes={leaveTypesResult.data ?? []}
       />
 

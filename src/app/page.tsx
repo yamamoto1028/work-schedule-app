@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUserId } from '@/lib/server/session'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,13 +21,13 @@ import {
 
 export default async function RootPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getAuthUserId()
 
-  if (user) {
+  if (userId) {
     const result = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle()
     const role = (result.data as { role: string } | null)?.role
     if (role === 'staff') {

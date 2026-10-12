@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUserId } from '@/lib/server/session'
 import { getMonthRange } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,8 +9,8 @@ import MonthNavigation from '@/components/staff/month-navigation'
 
 export default async function MyShiftsPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const userId = await getAuthUserId()
+  if (!userId) return null
 
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -24,7 +25,7 @@ export default async function MyShiftsPage({ searchParams }: { searchParams: Pro
       *,
       shift_types(name, short_name, color, time_zone)
     `)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .gte('date', start)
     .lt('date', nextMonthStart)
     .in('status', ['published', 'confirmed'])

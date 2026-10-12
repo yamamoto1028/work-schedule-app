@@ -25,11 +25,11 @@ export async function updateSession(request: NextRequest) {
   )
 
   // セッションの更新（必須）
-  // 無効な refresh token の場合は getUser がエラーを返すが、未ログインとして扱う
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
+  // getClaims() は期限切れのトークンを更新したうえで、非対称鍵なら手元で JWT を検証する
+  // （Supabase Auth への問い合わせが不要。対称鍵の場合は getUser() と同じく問い合わせる）
+  // 無効な refresh token の場合はエラーを返すが、未ログインとして扱う
+  const { data: claimsData, error: authError } = await supabase.auth.getClaims()
+  const user = claimsData?.claims ?? null
 
   if (authError?.status === 400) {
     // 無効な refresh token → クッキーをクリアして未ログイン状態にする

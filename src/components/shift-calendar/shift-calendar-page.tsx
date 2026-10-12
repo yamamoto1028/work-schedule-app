@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { checkConstraints, ShiftEntry, ConstraintViolation } from '@/lib/constraints/checker'
@@ -89,6 +90,7 @@ export default function ShiftCalendarPage({
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
   const supabase = createClient()
+  const router = useRouter()
 
   const monthStr = `${year}-${String(month).padStart(2, '0')}`
   const startDate = `${monthStr}-01`
@@ -386,6 +388,8 @@ export default function ShiftCalendarPage({
         .insert({ facility_id: facilityId, constraint_key: 'min_days_off_per_month', is_enabled: true, value })
     }
     await mutateConstraints()
+    // 設定画面も同じ値を表示するので、キャッシュ済みの画面を破棄する
+    router.refresh()
   }
 
   const errorCount = violations.filter(v => v.severity === 'error').length

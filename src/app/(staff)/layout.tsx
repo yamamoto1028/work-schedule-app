@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUserId } from '@/lib/server/session'
 import { redirect } from 'next/navigation'
 import StaffNav from '@/components/staff-nav'
 
@@ -8,14 +9,14 @@ export default async function StaffLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getAuthUserId()
 
-  if (!user) redirect('/login')
+  if (!userId) redirect('/login')
 
   const { data: userData } = await supabase
     .from('users')
     .select('*, facilities(name, type)')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   if (!userData) redirect('/login?error=setup_required')

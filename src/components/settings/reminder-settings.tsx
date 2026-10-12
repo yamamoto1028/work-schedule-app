@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -41,6 +42,7 @@ export default function ReminderSettings({
   initialDeadlineDay,
   initialMinWishes,
 }: Props) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   // シフト確認督促
@@ -69,6 +71,7 @@ export default function ReminderSettings({
       toast.error("保存に失敗しました");
     } else {
       toast.success("督促通知の設定を保存しました");
+      router.refresh();
     }
     setLoading(false);
   };
