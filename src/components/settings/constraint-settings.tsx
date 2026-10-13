@@ -135,6 +135,7 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
         .single()
       if (data) setConstraints(prev => [...prev, data as ConstraintSetting])
     }
+    router.refresh()
   }
 
   const categories = [...new Set(Object.values(constraintMeta).map((m) => m.category))].sort()
@@ -181,6 +182,7 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
                                 max={99}
                                 value={(currentValue[st.id] as number) ?? 0}
                                 onChange={(e) => handleValueChange(key, st.id, parseInt(e.target.value) || 0)}
+                                onBlur={() => router.refresh()}
                                 className="w-14 h-7 text-sm"
                               />
                               <span className="text-xs text-gray-500">名</span>
@@ -218,6 +220,7 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
                                 max={meta.valueField.max}
                                 value={(currentValue[meta.valueField.key] as number) ?? meta.valueField.min}
                                 onChange={(e) => handleValueChange(key, meta.valueField!.key, parseInt(e.target.value))}
+                                onBlur={() => router.refresh()}
                                 className="w-20 h-7 text-sm"
                               />
                             </div>
@@ -231,6 +234,7 @@ export default function ConstraintSettings({ facilityId, constraints: initialCon
                                 max={28}
                                 value={(currentValue.start_day as number) ?? 1}
                                 onChange={(e) => handleValueChange(key, 'start_day', parseInt(e.target.value))}
+                                onBlur={() => router.refresh()}
                                 className="w-16 h-7 text-sm"
                               />
                               <span className="text-xs text-gray-500">日</span>

@@ -21,7 +21,7 @@ export default async function LeavesPage() {
   const lastDay   = new Date(targetYear, targetMonth, 0).getDate()
   const endDate   = `${monthStr}-${String(lastDay).padStart(2, '0')}`
 
-  const [leavesResult, facilityResult, staffResult, wishTypesResult, leaveTypesResult, proxyLeavesResult] = await Promise.all([
+  const [leavesResult, facilityResult, staffResult, wishRequestsResult, leaveTypesResult, proxyLeavesResult] = await Promise.all([
     supabase
       .from('leave_requests')
       .select(`
@@ -46,11 +46,15 @@ export default async function LeavesPage() {
       .eq('role', 'staff')
       .eq('is_active', true),
 
+    // 来月の希望休（is_wish の休暇区分）の申請。区分の絞り込みは結合先で行い、1回の往復で取得する
     supabase
-      .from('leave_types')
-      .select('id')
+      .from('leave_requests')
+      .select('user_id, leave_types!inner(is_wish)')
       .eq('facility_id', facilityId)
-      .eq('is_wish', true),
+      .eq('leave_types.is_wish', true)
+      .in('status', ['pending', 'approved'])
+      .gte('date', startDate)
+      .lte('date', endDate),
 
     supabase
       .from('leave_types')
@@ -76,7 +80,6 @@ export default async function LeavesPage() {
 
   const minWishes   = facilityResult.data?.leave_min_wishes   ?? 2
   const deadlineDay = facilityResult.data?.leave_deadline_day ?? null
-  const wishTypeIds = (wishTypesResult.data ?? []).map(t => t.id)
   const allStaff    = staffResult.data ?? []
   const leaveTypes  = leaveTypesResult.data ?? []
 
@@ -100,19 +103,8 @@ export default async function LeavesPage() {
 
   // スタッフ別の希望休提出数を集計
   const submittedCountMap = new Map<string, number>()
-  if (wishTypeIds.length > 0) {
-    const { data: wishRequests } = await supabase
-      .from('leave_requests')
-      .select('user_id')
-      .eq('facility_id', facilityId)
-      .in('leave_type_id', wishTypeIds)
-      .in('status', ['pending', 'approved'])
-      .gte('date', startDate)
-      .lte('date', endDate)
-
-    for (const req of wishRequests ?? []) {
-      submittedCountMap.set(req.user_id, (submittedCountMap.get(req.user_id) ?? 0) + 1)
-    }
+  for (const req of wishRequestsResult.data ?? []) {
+    submittedCountMap.set(req.user_id, (submittedCountMap.get(req.user_id) ?? 0) + 1)
   }
 
   const unsubmittedStaff = allStaff
