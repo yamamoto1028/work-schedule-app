@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe/client'
 import { createServiceClient } from '@/lib/supabase/server'
 import type Stripe from 'stripe'
+import type { Database } from '@/types/database'
 
 async function updateFacilityPlan(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
@@ -15,7 +16,7 @@ async function updateFacilityPlan(
 ) {
   const { customerId, subscriptionId, facilityId, plan, subscriptionIdValue } = params
 
-  const updateData: Record<string, string | null> = { plan }
+  const updateData: Database['public']['Tables']['facilities']['Update'] = { plan }
   if (subscriptionIdValue !== undefined) {
     updateData.stripe_subscription_id = subscriptionIdValue
   }
