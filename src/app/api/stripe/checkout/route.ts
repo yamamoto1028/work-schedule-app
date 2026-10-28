@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 
 // POST /api/stripe/checkout
-export async function POST(_req: Request) {
+export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -58,12 +58,22 @@ export async function POST(_req: Request) {
       .eq('id', facilityId)
   }
 
+  const existingSubscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 1,
+  })
+  const isFirstSubscription = existingSubscriptions.data.length === 0
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { facilityId, targetPlan: 'pro' },
-    subscription_data: { metadata: { facilityId, targetPlan: 'pro' } },
+    subscription_data: {
+      metadata: { facilityId, targetPlan: 'pro' },
+      ...(isFirstSubscription ? { trial_period_days: 30 } : {}),
+    },
     success_url: `${appUrl}/admin/dashboard?checkout=success`,
     cancel_url: `${appUrl}/admin/dashboard?checkout=cancelled`,
     locale: 'ja',

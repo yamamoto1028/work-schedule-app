@@ -69,6 +69,12 @@ export async function POST(req: Request) {
   // ブロック数に応じた月額合計を計算し、合計金額をそのまま Stripe に渡す
   // quantity: blockCount で割り算するとJPY端数が生じるため quantity: 1 で合計額を渡す
   const monthlyTotal = calcEnterpriseMonthlyTotal(blockCount)
+  const existingSubscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 1,
+  })
+  const isFirstSubscription = existingSubscriptions.data.length === 0
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -85,6 +91,7 @@ export async function POST(req: Request) {
     metadata: { facilityId, targetPlan: 'enterprise', blockCount: String(blockCount) },
     subscription_data: {
       metadata: { facilityId, targetPlan: 'enterprise', blockCount: String(blockCount) },
+      ...(isFirstSubscription ? { trial_period_days: 30 } : {}),
     },
     success_url: `${appUrl}/admin/dashboard?checkout=success`,
     cancel_url:  `${appUrl}/admin/settings`,
