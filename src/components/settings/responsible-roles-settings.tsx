@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { Plus, Trash2, Sun, Moon, ShieldCheck } from 'lucide-react'
+import type { Database } from '@/types/database'
 
 type ResponsibleRole = {
   id: string
@@ -57,7 +58,7 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
       toast.error('追加に失敗しました')
       return
     }
-    setRoles([...roles, { can_create_shifts: false, ...data } as ResponsibleRole])
+    setRoles([...roles, data as ResponsibleRole])
     setNewForm({ name: '', color: '#E25822', require_day_zone: true, require_day_zone_count: 1, require_night_zone: false, require_night_zone_count: 1, can_create_shifts: false })
     toast.success('責任者区分を追加しました')
     router.refresh()
@@ -100,7 +101,7 @@ export default function ResponsibleRolesSettings({ facilityId, responsibleRoles:
     const supabase = createClient()
     const { error: updateError } = await supabase
       .from('responsible_roles')
-      .update({ [field]: value })
+      .update({ [field]: value } as Database['public']['Tables']['responsible_roles']['Update'])
       .eq('id', role.id)
 
     if (updateError) {

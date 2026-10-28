@@ -339,6 +339,7 @@ export type Database = {
           require_day_zone_count: number
           require_night_zone: boolean
           require_night_zone_count: number
+          can_create_shifts: boolean
           is_active: boolean
           created_at: string
         }
@@ -351,6 +352,7 @@ export type Database = {
           require_day_zone_count?: number
           require_night_zone?: boolean
           require_night_zone_count?: number
+          can_create_shifts?: boolean
           is_active?: boolean
           created_at?: string
         }
@@ -363,6 +365,7 @@ export type Database = {
           require_day_zone_count?: number
           require_night_zone?: boolean
           require_night_zone_count?: number
+          can_create_shifts?: boolean
           is_active?: boolean
           created_at?: string
         }
