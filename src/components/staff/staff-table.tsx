@@ -44,6 +44,7 @@ type StaffProfile = {
   responsible_role_id: string | null
   can_night_shift: boolean
   max_monthly_shifts: number | null
+  weekends_holidays_off: boolean
   phone: string | null
   staff_grade: 'full' | 'half' | 'new'
   fixed_night_count: number | null
@@ -170,6 +171,9 @@ export default function StaffTable({ staff: initialStaff, facilityId, responsibl
                   })()}
                   <TableCell className="text-sm text-gray-600">
                     {profile?.employment_type ?? '—'}
+                    {profile?.weekends_holidays_off && (
+                      <Badge variant="outline" className="ml-1.5 text-[11px]">土日祝休み</Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {profile ? (

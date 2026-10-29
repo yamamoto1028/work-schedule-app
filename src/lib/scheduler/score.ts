@@ -18,7 +18,9 @@ export function computeScores(state: ScheduleState): RawScore[] {
   const { P, D } = ctx
   const nightStaff = ctx.staff.map((st, s) => (st.canNightShift ? state.nightCount(s) : -1)).filter(n => n >= 0)
   const avgNight = average(nightStaff)
-  const avgWeekend = average(ctx.staff.map((_, s) => state.weekendCount(s)))
+  const avgWeekend = average(
+    ctx.staff.flatMap((st, s) => (st.weekendsHolidaysOff ? [] : [state.weekendCount(s)])),
+  )
 
   return ctx.staff.map((st, s) => {
     const row = state.cells[s]

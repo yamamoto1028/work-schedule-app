@@ -44,9 +44,12 @@ export function checkCategoryA(ctx: CheckContext): ConstraintViolation[] {
       }
     }
 
+    // 土日祝休み固定のスタッフは連勤上限・公休数の対象外（休みは土日祝で決まる）
+    const weekendsHolidaysOff = userShifts.some(s => s.weekendsHolidaysOff)
+
     // 連勤上限（夜勤ありスタッフ / 日中帯のみスタッフ / 全スタッフ共通）
     const worksNight = userShifts.some(s => s.timeZone === 'night')
-    const maxDays = resolveConsecutiveLimit(enabled, worksNight)
+    const maxDays = weekendsHolidaysOff ? null : resolveConsecutiveLimit(enabled, worksNight)
     if (maxDays !== null) {
       let consecCount = 0
       for (const date of dates) {
@@ -63,7 +66,7 @@ export function checkCategoryA(ctx: CheckContext): ConstraintViolation[] {
 
     // 月の公休数（休日数が公休数を下回っていないか）
     const daysOffCfg = enabled.get('min_days_off_per_month')
-    if (daysOffCfg) {
+    if (daysOffCfg && !weekendsHolidaysOff) {
       const required = resolveMonthlyDaysOff(daysOffCfg, yearMonth)
       const offDays = dates.length - shiftByDate.size
       if (offDays < required) {

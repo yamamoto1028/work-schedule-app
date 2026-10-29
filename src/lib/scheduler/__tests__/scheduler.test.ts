@@ -127,3 +127,38 @@ describe('人が足りないとき', () => {
     expect(nightUnfilled[0].reason).toContain('配置できるスタッフがいません')
   })
 })
+
+describe('土日祝休み固定のパート', () => {
+  // 2026年11月: 土日 9日 + 祝日 2日（3日・23日）= 平日 19日
+  const partTimer = {
+    id: 'pt', name: 'pt', canNightShift: false, staffGrade: 'full' as const,
+    maxMonthlyShifts: null, fixedNightCount: null, responsibleRoleName: null,
+    allowedShiftTypeIds: ['day'], weekendsHolidaysOff: true,
+  }
+  const base = baseInput()
+  const input = baseInput({
+    staff: [...base.staff, partTimer],
+    leaves: [...base.leaves, { userId: 'pt', date: '2026-11-18', countsAsDayOff: true }],
+  })
+  const result = generateSchedule(input)
+  const ptShifts = result.assignments.filter(a => a.userId === 'pt')
+  const dates = getDatesInMonth(2026, 11)
+  const offDays = new Set(dates.filter(d => {
+    const dow = new Date(`${d}T00:00:00Z`).getUTCDay()
+    return dow === 0 || dow === 6 || input.holidays.includes(d)
+  }))
+
+  it('土日祝には入れない', () => {
+    expect(ptShifts.filter(a => offDays.has(a.date))).toEqual([])
+  })
+
+  it('休暇のない平日はすべて勤務し、連勤上限で止まらない', () => {
+    // 平日19日 − 希望休1日 = 18日（日中帯のみスタッフの連勤上限 3日 は適用しない）
+    expect(ptShifts).toHaveLength(18)
+    expect(ptShifts.every(a => a.shiftTypeId === 'day')).toBe(true)
+  })
+
+  it('連勤・公休数・土日祝の違反が出ない', () => {
+    expect(result.violations.filter(v => v.userId === 'pt')).toEqual([])
+  })
+})

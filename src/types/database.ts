@@ -189,6 +189,7 @@ export type Database = {
           fixed_night_count: number | null
           allowed_shift_type_ids: string[]
           block_id: string | null
+          weekends_holidays_off: boolean
           updated_at: string
         }
         Insert: {
@@ -206,6 +207,7 @@ export type Database = {
           fixed_night_count?: number | null
           allowed_shift_type_ids?: string[]
           block_id?: string | null
+          weekends_holidays_off?: boolean
           updated_at?: string
         }
         Update: {
@@ -223,6 +225,7 @@ export type Database = {
           fixed_night_count?: number | null
           allowed_shift_type_ids?: string[]
           block_id?: string | null
+          weekends_holidays_off?: boolean
           updated_at?: string
         }
         Relationships: [

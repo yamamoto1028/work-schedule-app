@@ -47,6 +47,7 @@ const INITIAL_FORM = {
   responsible_role_id: 'none',
   staff_grade: 'full' as 'full' | 'half' | 'new',
   can_night_shift: true,
+  weekends_holidays_off: false,
   phone: '',
   allowed_shift_type_ids: [] as string[],
   block_id: 'none',
@@ -81,6 +82,7 @@ export default function StaffCreateDialog({ responsibleRoles, shiftTypes, plan =
         responsible_role_id: form.responsible_role_id === 'none' ? undefined : form.responsible_role_id,
         staff_grade: form.staff_grade,
         can_night_shift: form.can_night_shift,
+        weekends_holidays_off: form.weekends_holidays_off,
         phone: form.phone || undefined,
         allowed_shift_type_ids: form.allowed_shift_type_ids,
         block_id: form.block_id === 'none' ? undefined : form.block_id,
@@ -283,6 +285,18 @@ export default function StaffCreateDialog({ responsibleRoles, shiftTypes, plan =
               onCheckedChange={(v) => setForm({ ...form, can_night_shift: v })}
             />
             <Label htmlFor="can-night">夜勤可能</Label>
+          </div>
+
+          <div className="space-y-1 py-2">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="weekends-off"
+                checked={form.weekends_holidays_off}
+                onCheckedChange={(v) => setForm({ ...form, weekends_holidays_off: v })}
+              />
+              <Label htmlFor="weekends-off">土日祝休み（固定）</Label>
+            </div>
+            <p className="text-xs text-gray-500 pl-12">平日のみ勤務のパートなど。連勤上限・公休数の対象外になります</p>
           </div>
 
           {shiftTypes.length > 0 && (

@@ -1,7 +1,7 @@
 // カテゴリ D：スタッフ属性別制約
 
 import type { CheckContext, ConstraintViolation, ShiftEntry } from './types'
-import { isHalfGrade } from './rules'
+import { isHalfGrade, isWeekendOrHoliday } from './rules'
 
 export function checkCategoryD(ctx: CheckContext): ConstraintViolation[] {
   const { enabled, shifts, shiftTypeNames } = ctx
@@ -16,6 +16,18 @@ export function checkCategoryD(ctx: CheckContext): ConstraintViolation[] {
         userId: s.userId,
         date: s.date,
         message: `「${typeName}」はこのスタッフに許可されていないシフトです`,
+        severity: 'error',
+      })
+    }
+  }
+
+  // 土日祝休み固定のスタッフ（制約設定に関わらず常にチェック）
+  for (const s of shifts) {
+    if (s.weekendsHolidaysOff && isWeekendOrHoliday(s.date, ctx.holidays)) {
+      violations.push({
+        userId: s.userId,
+        date: s.date,
+        message: '土日祝休みのスタッフです',
         severity: 'error',
       })
     }

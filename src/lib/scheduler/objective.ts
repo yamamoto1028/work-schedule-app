@@ -52,7 +52,8 @@ export function penalty(state: ScheduleState): number {
     if (st.fixedNightCount != null) total += WEIGHTS.fixedNight * Math.abs(st.fixedNightCount - nights)
     else if (!st.reservedForDay && ctx.nightTypes.some(t => st.allowed[t])) nightCounts.push(nights)
 
-    if (st.targetWork > 0) weekendCounts.push(state.weekendCount(s))
+    // 土日祝休み固定のスタッフは土日祝出勤の均等化の対象外
+    if (st.targetWork > 0 && !st.weekendsHolidaysOff) weekendCounts.push(state.weekendCount(s))
 
     if (rules.minWeeklyOff !== null) {
       for (const [a, b] of ctx.weeks) {

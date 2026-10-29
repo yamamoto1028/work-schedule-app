@@ -37,6 +37,7 @@ function staff(id: string, overrides: Partial<SchedulerStaff> = {}): SchedulerSt
     fixedNightCount: null,
     responsibleRoleName: null,
     allowedShiftTypeIds: [],
+    weekendsHolidaysOff: false,
     ...overrides,
   }
 }

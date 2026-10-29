@@ -3,11 +3,11 @@
 import type { ConstraintConfig } from '@/lib/constraints/types'
 import {
   addDays,
-  dayOfWeek,
   fullWeeksInMonth,
   getDatesInMonth,
   isAkeShiftType,
   isHalfGrade,
+  isWeekendOrHoliday,
   isResponsibleRoleName,
   resolveConsecutiveLimit,
   resolveMaxMonthlyShifts,
@@ -118,6 +118,9 @@ export function buildContext(input: SchedulerInput): Context {
     leaveDates.get(l.userId)!.set(l.date, l.countsAsDayOff)
   }
 
+  const holidaySet = new Set(input.holidays)
+  const weekendOrHoliday = dates.map(d => isWeekendOrHoliday(d, holidaySet))
+
   const facilityMaxNight = resolveMaxNightShifts(enabled)
   const staff: StaffInfo[] = input.staff.map(s => {
     const allowed = types.map((t, i) => {
@@ -128,8 +131,12 @@ export function buildContext(input: SchedulerInput): Context {
     const leaves = [...(leaveDates.get(s.id)?.entries() ?? [])].filter(([d]) => dates.includes(d))
     const wishOff = leaves.filter(([, counts]) => counts).length
     const otherOff = leaves.length - wishOff
-    // 公休数は固定。希望休は公休に含め、有給などは公休とは別に休む
-    let targetWork = Math.max(0, D - Math.max(input.daysOff, wishOff) - otherOff)
+    // 公休数は固定。希望休は公休に含め、有給などは公休とは別に休む。
+    // 土日祝休み固定のスタッフは、休暇のない平日がすべて勤務日（公休数は使わない）
+    const leaveSet = new Set(leaves.map(([d]) => d))
+    let targetWork = s.weekendsHolidaysOff
+      ? dates.filter((d, i) => !weekendOrHoliday[i] && !leaveSet.has(d)).length
+      : Math.max(0, D - Math.max(input.daysOff, wishOff) - otherOff)
     const cap = resolveMaxMonthlyShifts(enabled, s.maxMonthlyShifts)
     if (cap !== null) targetWork = Math.min(targetWork, cap)
 
@@ -155,12 +162,6 @@ export function buildContext(input: SchedulerInput): Context {
     const primary = nightTypes.find(i => staff.some(s => s.allowed[i])) ?? nightTypes[0]
     required[primary] = 1
   }
-
-  const holidaySet = new Set(input.holidays)
-  const weekendOrHoliday = dates.map(d => {
-    const dow = dayOfWeek(d)
-    return dow === 0 || dow === 6 || holidaySet.has(d)
-  })
 
   const intervalWindows: Array<[number, number]> = []
   if (rules.interval) {
@@ -265,6 +266,7 @@ export class ScheduleState {
         if (!types[t].isAke) nights++
       }
       if (!st.allowed[t]) cost++
+      if (st.weekendsHolidaysOff && ctx.weekendOrHoliday[i - P]) cost++
     }
 
     for (let i = P - 1; i < P + D - 1; i++) {
@@ -282,7 +284,8 @@ export class ScheduleState {
       }
     }
 
-    const limit = worksNight ? rules.consecLimitNight : rules.consecLimitDay
+    // 土日祝休み固定のスタッフは連勤上限なし（平日の連続勤務は土日祝で必ず区切られる）
+    const limit = st.weekendsHolidaysOff ? null : worksNight ? rules.consecLimitNight : rules.consecLimitDay
     if (limit !== null) {
       let run = 0
       for (let i = 0; i < P + D; i++) {

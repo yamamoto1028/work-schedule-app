@@ -11,6 +11,7 @@ export type SchedulerStaff = {
   fixedNightCount: number | null
   responsibleRoleName: string | null
   allowedShiftTypeIds: string[] // 空 = 制限なし
+  weekendsHolidaysOff: boolean // 土日祝休み固定（土日祝は入れない・連勤上限なし・公休数は土日祝の日数）
 }
 
 // sort_order 順に並べて渡す（先頭の日中帯区分が「基本の日勤」になる）

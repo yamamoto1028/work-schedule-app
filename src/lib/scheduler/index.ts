@@ -72,6 +72,7 @@ export function generateSchedule(input: SchedulerInput): SchedulerResult {
         allowedShiftTypeIds: st.allowedShiftTypeIds,
         staffGrade: st.staffGrade,
         maxMonthlyShifts: st.maxMonthlyShifts,
+        weekendsHolidaysOff: st.weekendsHolidaysOff,
       })
     }
   })
@@ -81,6 +82,7 @@ export function generateSchedule(input: SchedulerInput): SchedulerResult {
     input.year,
     input.month,
     new Map(input.shiftTypes.map(t => [t.id, t.name])),
+    input.holidays,
   )
 
   const raw = computeScores(state)

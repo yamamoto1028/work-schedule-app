@@ -15,7 +15,8 @@ export function checkConstraints(
   constraints: ConstraintConfig[],
   year: number,
   month: number,
-  shiftTypeNames?: Map<string, string>
+  shiftTypeNames?: Map<string, string>,
+  holidays: string[] = []
 ): ConstraintViolation[] {
   // ユーザー別にシフトをグループ化
   const byUser = new Map<string, ShiftEntry[]>()
@@ -31,6 +32,7 @@ export function checkConstraints(
     year,
     month,
     enabled: toEnabledMap(constraints),
+    holidays: new Set(holidays),
     shiftTypeNames,
   }
 

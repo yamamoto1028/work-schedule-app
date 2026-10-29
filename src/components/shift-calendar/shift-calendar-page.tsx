@@ -12,7 +12,8 @@ import PlanGate from '@/components/plan-gate'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2, LayoutGrid, LayoutList, EyeOff, Trash2, FileDown, BellRing, Building2 } from 'lucide-react'
-import { resolveMonthlyDaysOff } from '@/lib/constraints/rules'
+import { getDatesInMonth, resolveMonthlyDaysOff } from '@/lib/constraints/rules'
+import HolidayJP from '@holiday-jp/holiday_jp'
 import type { SchedulerAssignment, StaffScore } from '@/lib/scheduler'
 import type { Json } from '@/types/database'
 
@@ -25,6 +26,7 @@ type StaffMember = {
     can_night_shift: boolean
     staff_grade: 'full' | 'half' | 'new'
     max_monthly_shifts: number | null
+    weekends_holidays_off: boolean
     allowed_shift_type_ids: string[]
     block_id: string | null
     responsible_roles: { name: string; color: string } | null
@@ -176,11 +178,14 @@ export default function ShiftCalendarPage({
         allowedShiftTypeIds: staffAllowedMap.get(s.user_id) ?? [],
         staffGrade: profileMap.get(s.user_id)?.staff_grade,
         maxMonthlyShifts: profileMap.get(s.user_id)?.max_monthly_shifts ?? null,
+        weekendsHolidaysOff: profileMap.get(s.user_id)?.weekends_holidays_off ?? false,
       }
     })
 
     const shiftTypeNames = new Map(shiftTypes.map(t => [t.id, t.name]))
-    const v = checkConstraints(entries, constraints, year, month, shiftTypeNames)
+    // holiday_jp はローカル時刻で判定するため、ローカル時刻の Date を渡す
+    const holidays = getDatesInMonth(year, month).filter((_, i) => HolidayJP.isHoliday(new Date(year, month - 1, i + 1)))
+    const v = checkConstraints(entries, constraints, year, month, shiftTypeNames, holidays)
     setViolations(v)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shifts, constraints, shiftTypes, year, month])

@@ -127,6 +127,11 @@ export function dayOfWeek(dateStr: string): number {
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay()
 }
 
+export function isWeekendOrHoliday(dateStr: string, holidays: Set<string>): boolean {
+  const dow = dayOfWeek(dateStr)
+  return dow === 0 || dow === 6 || holidays.has(dateStr)
+}
+
 /** 月内に完全に収まる週（月曜〜日曜）の日付インデックス範囲 [start, end) */
 export function fullWeeksInMonth(dates: string[]): Array<[number, number]> {
   const weeks: Array<[number, number]> = []

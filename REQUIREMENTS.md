@@ -249,6 +249,7 @@ NEXT_PUBLIC_APP_URL=
 | 責任者区分       | `responsible_roles` から選択（null = 非責任者） |
 | 保有スキル・資格 | 複数選択（施設側でマスタ設定）                  |
 | 夜勤可否         | boolean フラグ                                  |
+| 土日祝休み（固定）| boolean フラグ（`weekends_holidays_off`）。平日のみ勤務のパート等。土日祝にシフトを入れず、連勤上限・公休数の対象外 |
 | 月最大勤務数     | 個人設定（施設デフォルト値を上書き）            |
 | アカウント状態   | 有効 / 無効                                     |
 
@@ -308,6 +309,7 @@ NEXT_PUBLIC_APP_URL=
   - `{ "days": 基本値, "monthly": { "YYYY-MM": 月別値 } }`（月別値がなければ基本値、どちらもなければ 8 日）
 - スタッフごとの目標勤務日数 ＝ 月の日数 − max(公休数, 希望休の日数) − 公休以外の休暇日数
   - スタッフ個人の `max_monthly_shifts`（なければ施設の `max_monthly_shifts`）の方が少なければそちらを採用
+- 土日祝休み固定のスタッフ（`weekends_holidays_off = true`）は公休数を使わず、休暇のない平日がすべて目標勤務日数になる（土日祝が休み）
 - 「明け」の日は出勤日として数える
 
 #### 4.4.3 アルゴリズム（`lib/scheduler/`）
@@ -318,7 +320,7 @@ NEXT_PUBLIC_APP_URL=
 | ② 改善（`improve.ts`） | 勤務の移動・交換を繰り返す焼きなまし法。ハード制約を悪化させない操作だけを試し、ペナルティ（`objective.ts`）が下がる方向へ進める |
 | ③ 検証（`index.ts`） | 既存シフト + 作成シフト全体を `lib/constraints` の制約チェッカーで検証し、違反を返す |
 
-- **ハード制約**（違反する割り当ては作らない）: 承認済み休暇、既存シフト、許可シフト、夜勤不可、夜勤の翌日は明け、明け翌日休み、夜間帯翌日の日中帯禁止、連勤上限（前月末から通算）、目標勤務日数、夜勤回数上限・`fixed_night_count`
+- **ハード制約**（違反する割り当ては作らない）: 承認済み休暇、既存シフト、許可シフト、夜勤不可、土日祝休み固定、夜勤の翌日は明け、明け翌日休み、夜間帯翌日の日中帯禁止、連勤上限（前月末から通算）、目標勤務日数、夜勤回数上限・`fixed_night_count`
 - **ソフト制約**（重み付きペナルティを最小化。重みは 4.5「制約の適用優先度」の順）: 最低配置人数、責任者配置、指定責任者の夜勤間隔、目標勤務日数との差、週休、半人前職員の重複、夜勤回数・土日祝出勤の均等化、飛び石休み、日ごとの人数の均等化
 - 夜間帯は最低配置人数の設定がなくても毎日 1 名を確保する。日中帯で 0 / 未設定の区分は必要人数なしとして扱う
 - 日中帯の責任者配置が必要（かつ夜間帯は不要）な設定では、責任者の夜勤は他のスタッフで回せないときだけ入れ、夜勤の均等配分の対象から外す
@@ -367,6 +369,8 @@ NEXT_PUBLIC_APP_URL=
 | `min_days_off_per_month`     | 8日/月       | 0〜31日      | 月の公休数（固定）。`value.monthly` で月ごとに上書き（4.4.2） |
 | `min_weekly_days_off`        | 2日/週       | 0〜7日       | 週あたり最低休日数                                           |
 | `max_monthly_shifts`         | 22日         | 1〜31日      | 月最大勤務数（スタッフ個人設定で上書き可）                   |
+
+> 土日祝休み固定のスタッフ（`staff_profiles.weekends_holidays_off`）は、連勤上限 3 種と `min_days_off_per_month` の対象外とする（休みは土日祝で決まり、平日の連続勤務は土日祝で必ず区切られるため）。土日祝のシフトは制約設定に関わらずエラーとする。
 
 > `rest_after_night_off` と `no_day_shift_after_night` は併用可能。前者は明けの翌日を完全休日に固定し、後者は日中帯配置を禁止する（明けを置くことは許容）。
 
@@ -444,6 +448,8 @@ alter table staff_profiles add column staff_grade text not null default 'full'
   -- full=フル職員 / half=半人前 / new=新人（halfに含まれる）
 alter table staff_profiles add column fixed_night_count integer;
   -- null=均等配分 / 数値=この回数を固定で夜勤に入れる
+alter table staff_profiles add column weekends_holidays_off boolean not null default false;
+  -- 土日祝休み固定（017）。連勤上限・公休数の対象外
 
 -- 委員会担当テーブル
 create table committee_assignments (

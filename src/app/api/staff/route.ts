@@ -32,6 +32,7 @@ export async function POST(req: Request) {
     responsible_role_id,
     staff_grade = 'full',
     can_night_shift = true,
+    weekends_holidays_off = false,
     phone,
     allowed_shift_type_ids = [],
     block_id,
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
     responsible_role_id?: string
     staff_grade?: 'full' | 'half' | 'new'
     can_night_shift?: boolean
+    weekends_holidays_off?: boolean
     phone?: string
     allowed_shift_type_ids?: string[]
     block_id?: string
@@ -136,6 +138,7 @@ export async function POST(req: Request) {
     responsible_role_id: responsible_role_id || null,
     staff_grade,
     can_night_shift,
+    weekends_holidays_off,
     phone: phone || null,
     allowed_shift_type_ids,
     block_id: block_id || null,

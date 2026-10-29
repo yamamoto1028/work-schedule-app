@@ -23,6 +23,7 @@ type StaffProfileRow = {
   fixed_night_count: number | null
   allowed_shift_type_ids: string[]
   block_id: string | null
+  weekends_holidays_off: boolean
   responsible_roles: { name: string } | null
 }
 
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
           id, display_name,
           staff_profiles(
             can_night_shift, staff_grade, max_monthly_shifts, fixed_night_count,
-            allowed_shift_type_ids, block_id,
+            allowed_shift_type_ids, block_id, weekends_holidays_off,
             responsible_roles(name)
           )
         `)
@@ -121,6 +122,7 @@ export async function POST(req: Request) {
       fixedNightCount: profile?.fixed_night_count ?? null,
       responsibleRoleName: profile?.responsible_roles?.name ?? null,
       allowedShiftTypeIds: profile?.allowed_shift_type_ids ?? [],
+      weekendsHolidaysOff: profile?.weekends_holidays_off ?? false,
     }))
   const staffIds = new Set(staff.map(s => s.id))
 

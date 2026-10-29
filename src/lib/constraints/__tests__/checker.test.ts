@@ -70,3 +70,35 @@ describe('checkConstraints', () => {
     expect(v.map(x => x.severity)).toEqual(['error'])
   })
 })
+
+describe('土日祝休み固定のスタッフ', () => {
+  const holidays = ['2026-11-03', '2026-11-23']
+  const constraints = [
+    on('max_consecutive_day_only', { days: 3 }),
+    on('max_consecutive_days', { days: 5 }),
+    on('min_days_off_per_month', { days: 12 }),
+  ]
+
+  it('平日5連勤でも連勤上限・公休数を警告しない', () => {
+    // 2026-11-09〜13（月〜金）の5連勤など、平日をすべて勤務
+    const weekdays = Array.from({ length: 30 }, (_, i) => i + 1)
+      .filter(d => ![1, 3, 7, 8, 14, 15, 21, 22, 23, 28, 29].includes(d))
+    const shifts = weekdays.map(d => day('pt', nov(d), { weekendsHolidaysOff: true }))
+    expect(checkConstraints(shifts, constraints, 2026, 11, undefined, holidays)).toEqual([])
+  })
+
+  it('土日・祝日のシフトはエラー', () => {
+    const shifts = [nov(3), nov(7)].map(d => day('pt', d, { weekendsHolidaysOff: true }))
+    const v = checkConstraints(shifts, [], 2026, 11, undefined, holidays)
+    expect(v.map(x => [x.date, x.message, x.severity])).toEqual([
+      ['2026-11-03', '土日祝休みのスタッフです', 'error'],
+      ['2026-11-07', '土日祝休みのスタッフです', 'error'],
+    ])
+  })
+
+  it('通常のスタッフは従来どおり連勤上限を警告する', () => {
+    const shifts = [9, 10, 11, 12].map(d => day('a', nov(d)))
+    const v = checkConstraints(shifts, constraints, 2026, 11, undefined, holidays)
+    expect(v.map(x => x.message)).toContain('連続勤務4日目（上限3日）')
+  })
+})

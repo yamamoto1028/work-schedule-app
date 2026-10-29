@@ -169,6 +169,7 @@ import { updateSession } from "@/lib/supabase/middleware";
   - 新しい制約を足すときは、ハードなら `hardCost()`、ソフトなら `penalty()` に追加し、チェッカー側にも同じ判定を入れる
 - 同じ入力・同じ seed なら同じ結果になる。テストでも seed を固定する
 - 公休数は月ごとに固定。`min_days_off_per_month` の `value.monthly["YYYY-MM"]`（なければ `value.days`）。希望休（`is_wish`）は公休に含み、有給などは別枠。明けは出勤日
+- 土日祝休み固定のスタッフ（`weekends_holidays_off`）は土日祝に入れず、連勤上限・公休数の対象外（休暇のない平日がすべて勤務日）。チェッカーにも祝日一覧（`checkConstraints` の第6引数）を渡すこと
 - API は `app/api/shifts/generate/route.ts`。データはクライアントから受け取らずサーバーで DB から取得する（保存はしない。適用はクライアントから一括 insert）
 - セリフは `commentary.ts` のテンプレート。キャラクターは安芸弁（広島県西部の方言）を使う。備後弁と混同しないこと
 - 施設タイプ（`hospital` / `care_facility`）でトーンが切り替わる
@@ -241,13 +242,13 @@ npm test
 
 ## DB テーブル一覧（概要）
 
-詳細な SQL 定義は `REQUIREMENTS.md 5.2` を参照。マイグレーションは `supabase/migrations/001〜013` まで適用済み。
+詳細な SQL 定義は `REQUIREMENTS.md 5.2` を参照。マイグレーションは `supabase/migrations/001〜017` まで（017: `staff_profiles.weekends_holidays_off`）。
 
 | テーブル名              | 概要                                                         |
 | ----------------------- | ------------------------------------------------------------ |
 | `facilities`            | 施設マスタ                                                   |
 | `users`                 | ユーザー（Supabase Auth と連携）                             |
-| `staff_profiles`        | スタッフ詳細（`staff_grade` / `fixed_night_count` / `allowed_shift_type_ids` 含む） |
+| `staff_profiles`        | スタッフ詳細（`staff_grade` / `fixed_night_count` / `allowed_shift_type_ids` / `weekends_holidays_off` 含む） |
 | `shift_types`           | 勤務区分マスタ（`time_zone: day/night` で帯分類）            |
 | `leave_types`           | 休暇区分マスタ（`monthly_limit` カラム追加済み: 007）        |
 | `responsible_roles`     | 責任者区分マスタ（日中帯・夜間帯の必須配置設定）             |

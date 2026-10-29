@@ -36,6 +36,7 @@ type StaffProfile = {
   responsible_role_id: string | null
   can_night_shift: boolean
   max_monthly_shifts: number | null
+  weekends_holidays_off: boolean
   phone: string | null
   staff_grade: 'full' | 'half' | 'new'
   fixed_night_count: number | null
@@ -78,6 +79,7 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, s
     staff_grade: (profile?.staff_grade ?? 'full') as 'full' | 'half' | 'new',
     can_night_shift: profile?.can_night_shift ?? true,
     max_monthly_shifts: profile?.max_monthly_shifts?.toString() ?? '',
+    weekends_holidays_off: profile?.weekends_holidays_off ?? false,
     phone: profile?.phone ?? '',
     allowed_shift_type_ids: profile?.allowed_shift_type_ids ?? [],
     block_id: profile?.block_id ?? 'none',
@@ -110,6 +112,7 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, s
       staff_grade: form.staff_grade,
       can_night_shift: form.can_night_shift,
       max_monthly_shifts: form.max_monthly_shifts ? parseInt(form.max_monthly_shifts) : null,
+      weekends_holidays_off: form.weekends_holidays_off,
       phone: form.phone || null,
       allowed_shift_type_ids: form.allowed_shift_type_ids,
       block_id: form.block_id === 'none' ? null : form.block_id,
@@ -264,6 +267,18 @@ export default function StaffEditDialog({ staff, facilityId, responsibleRoles, s
               onCheckedChange={(v) => setForm({ ...form, can_night_shift: v })}
             />
             <Label htmlFor="can-night-edit">夜勤可能</Label>
+          </div>
+
+          <div className="space-y-1 py-2">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="weekends-off-edit"
+                checked={form.weekends_holidays_off}
+                onCheckedChange={(v) => setForm({ ...form, weekends_holidays_off: v })}
+              />
+              <Label htmlFor="weekends-off-edit">土日祝休み（固定）</Label>
+            </div>
+            <p className="text-xs text-gray-500 pl-12">平日のみ勤務のパートなど。連勤上限・公休数の対象外になります</p>
           </div>
 
           {shiftTypes.length > 0 && (
