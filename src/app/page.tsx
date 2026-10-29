@@ -469,7 +469,7 @@ export default async function RootPage() {
 
             {/* 注記 */}
             <p className="text-center text-xs text-gray-400 mt-8">
-              ※ 月払い。初月は無料トライアルとしてご利用いただけます。消費税は別途申し受けます。
+              ※ 月払い。初回契約は30日間無料でご利用いただけます。表示価格は税込です。
             </p>
           </div>
         </section>
@@ -513,7 +513,12 @@ export default async function RootPage() {
             <span className="text-sm font-medium text-gray-300">YOMOGI</span>
             <span className="text-xs text-gray-500">〜愚痴りながら最適解を出すシフト管理AI〜</span>
           </div>
-          <p className="text-xs text-gray-600">© 2026 YOMOGI. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/legal/commercial-transactions" className="hover:text-gray-300 transition-colors">
+              特定商取引法に基づく表記
+            </Link>
+            <p className="text-gray-600">© 2026 YOMOGI. All rights reserved.</p>
+          </div>
         </div>
       </footer>
     </div>

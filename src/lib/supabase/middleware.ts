@@ -39,7 +39,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 未ログイン → ログインページへ（ロールチェックはlayoutに委譲）
-  const publicPaths = ['/login', '/register', '/auth/callback', '/api']
+  const publicPaths = ['/login', '/register', '/auth/callback', '/api', '/legal']
   if (!user && !publicPaths.some(p => pathname.startsWith(p))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
